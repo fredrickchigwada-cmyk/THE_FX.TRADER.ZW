@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+build/
+bin/
+.gradle/
+.buildozer/
+THE-FX-TRADER-BOT-APK/
+buildozer-log/
+build_error.txt
+full_build.log
+job.log
+main.py.broken_backup
+main_backup.py
