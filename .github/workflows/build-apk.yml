@@ -29,9 +29,19 @@ jobs:
 
       - name: Build APK
         run: |
-          buildozer -v android debug
+          set -o pipefail
+          buildozer -v android debug 2>&1 | tee buildozer.log
+
+      - name: Upload Buildozer log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: buildozer-log
+          path: buildozer.log
+          if-no-files-found: ignore
 
       - name: Upload APK
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: THE-FX-TRADER-BOT-APK
