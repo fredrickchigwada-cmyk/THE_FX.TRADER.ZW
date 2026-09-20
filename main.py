@@ -295,10 +295,12 @@ class TradingBot:
 
         self.connection_status = "CONNECTED"
 
-        self.market_status = "OPEN"
-        self.data_status = "LIVE"
+        # Connecting does NOT mean the market is open.
+        # Wait for Deriv to provide a tick or a MarketIsClosed error.
+        self.market_status = "CHECKING"
+        self.data_status = "CHECKING MARKET"
 
-        self.update_callback("CONNECTED")
+        self.update_callback("CHECKING MARKET...")
 
         request = {
             "ticks": SYMBOL,
@@ -385,6 +387,7 @@ class TradingBot:
 
             self.last_tick_time = time.time()
 
+            # A real tick confirms that the instrument is currently trading.
             self.market_status = "OPEN"
             self.data_status = "LIVE"
 
