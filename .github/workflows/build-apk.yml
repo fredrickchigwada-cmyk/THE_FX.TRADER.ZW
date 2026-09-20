@@ -1,4 +1,4 @@
-name: Build THE_FX.TRADER BOT APK
+name: Build THE_FX.TRADER BOT
 
 on:
   workflow_dispatch:
@@ -14,25 +14,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install system dependencies
+      - name: Install dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            git \
-            zip \
-            unzip \
-            openjdk-17-jdk \
-            python3 \
-            python3-pip \
-            python3-venv \
-            build-essential \
-            libffi-dev \
-            libssl-dev \
-            libjpeg-dev \
-            zlib1g-dev \
-            libfreetype6-dev
+            git zip unzip openjdk-17-jdk python3 python3-pip \
+            python3-venv build-essential libffi-dev libssl-dev \
+            libjpeg-dev zlib1g-dev libfreetype6-dev
 
-      - name: Install Python build tools
+      - name: Install Buildozer
         run: |
           python3 -m pip install --upgrade pip
           python3 -m pip install buildozer cython
