@@ -256,12 +256,14 @@ class TradingBot:
     # ========================================================
 
     def _connect(self):
+        """Maintain a persistent Deriv WebSocket connection."""
+        reconnect_delay = 5
 
         while self.running:
-
             try:
-
                 self.connection_status = "CONNECTING"
+                self.data_status = "CONNECTING"
+                self.update_callback("CONNECTING TO DERIV...")
 
                 self.ws = websocket.WebSocketApp(
                     WS_URL,
@@ -277,30 +279,43 @@ class TradingBot:
                 )
 
             except Exception as error:
+                if not self.running:
+                    break
 
-                self.connection_status = "ERROR"
-
+                self.connection_status = "RECONNECTING"
+                self.data_status = "RECONNECTING"
                 self.update_callback(
                     f"CONNECTION ERROR: {error}"
                 )
 
-                if self.running:
-                    time.sleep(5)
+            if self.running:
+                self.connection_status = "RECONNECTING"
+
+                # Do not display RECONNECTING as a market/data error
+                # when Deriv has already told us the market is closed.
+                if self.market_status == "CLOSED":
+                    self.data_status = "MARKET CLOSED"
+                    self.update_callback("MARKET CLOSED")
+                else:
+                    self.data_status = "RECONNECTING"
+                    self.update_callback("RECONNECTING...")
+
+                time.sleep(reconnect_delay)
 
     # ========================================================
     # OPEN CONNECTION
     # ========================================================
 
     def _on_open(self, ws):
+        """Called when the WebSocket connection is established."""
 
         self.connection_status = "CONNECTED"
 
-        # Connecting does NOT mean the market is open.
-        # Wait for Deriv to provide a tick or a MarketIsClosed error.
+        # A connection alone does NOT mean XAUUSD is open.
         self.market_status = "CHECKING"
         self.data_status = "CHECKING MARKET"
 
-        self.update_callback("CHECKING MARKET...")
+        self.update_callback("CHECKING XAUUSD MARKET...")
 
         request = {
             "ticks": SYMBOL,
@@ -308,13 +323,10 @@ class TradingBot:
         }
 
         try:
-
-            ws.send(
-                json.dumps(request)
-            )
-
+            ws.send(json.dumps(request))
         except Exception as error:
-
+            self.connection_status = "ERROR"
+            self.data_status = "ERROR"
             self.update_callback(
                 f"SEND ERROR: {error}"
             )
@@ -324,85 +336,109 @@ class TradingBot:
     # ========================================================
 
     def _on_message(self, ws, message):
+        """Process Deriv WebSocket messages safely."""
 
         try:
-
             data = json.loads(message)
 
             # ------------------------------------------------
             # DERIV ERROR
             # ------------------------------------------------
 
-            if "error" in data:
+            if data.get("error"):
+                error_data = data.get("error", {})
 
-                error_message = data["error"].get(
+                error_code = error_data.get(
+                    "code",
+                    error_data.get("subcode", "")
+                )
+
+                error_message = error_data.get(
                     "message",
                     "Unknown Deriv error"
                 )
 
-                if "MarketIsClosed" in error_message:
+                # IMPORTANT:
+                # Deriv can return msg_type='tick' together with
+                # an error when the market is closed. Therefore
+                # ERROR MUST ALWAYS be handled before tick data.
 
+                if (
+                    error_code == "MarketIsClosed"
+                    or error_data.get("subcode") == "MarketIsClosed"
+                    or "MarketIsClosed" in error_message
+                ):
                     self.market_status = "CLOSED"
                     self.data_status = "MARKET CLOSED"
+                    self.connection_status = "CONNECTED"
 
                     self.signal = "WAIT"
-
                     self.entry = "-"
                     self.sl = "-"
                     self.tp1 = "-"
                     self.tp2 = "-"
                     self.tp3 = "-"
-
                     self.signal_strength = "MARKET CLOSED"
 
-                    self.update_callback(
-                        "MARKET CLOSED"
-                    )
+                    self.update_callback("MARKET CLOSED")
+                    return
 
-                else:
-
-                    self.data_status = "ERROR"
-                    self.market_status = "ERROR"
-
-                    self.update_callback(
-                        "DERIV: " + error_message
-                    )
-
+                self.data_status = "ERROR"
+                self.update_callback(
+                    "DERIV: " + str(error_message)
+                )
                 return
 
             # ------------------------------------------------
-            # TICK
+            # IGNORE NON-TICK MESSAGES
+            # ------------------------------------------------
+
+            if data.get("msg_type") != "tick":
+                return
+
+            # ------------------------------------------------
+            # REAL TICK VALIDATION
             # ------------------------------------------------
 
             tick = data.get("tick")
 
-            if not tick:
+            if not isinstance(tick, dict):
+                # This prevents a MarketIsClosed response or
+                # malformed message from becoming fake live data.
                 return
 
-            quote = float(
-                tick["quote"]
-            )
+            if "quote" not in tick:
+                return
+
+            try:
+                quote = float(tick["quote"])
+            except (TypeError, ValueError):
+                return
+
+            # ------------------------------------------------
+            # REAL LIVE DATA
+            # ------------------------------------------------
 
             self.price = quote
-
             self.last_tick_time = time.time()
 
-            # A real tick confirms that the instrument is currently trading.
+            self.connection_status = "CONNECTED"
             self.market_status = "OPEN"
             self.data_status = "LIVE"
 
             self.prices.append(quote)
 
             if len(self.prices) > 300:
-
                 self.prices.pop(0)
 
             self._calculate()
 
-        except Exception as error:
-
+        except json.JSONDecodeError:
             self.data_status = "DATA ERROR"
+            self.update_callback("DATA ERROR: INVALID JSON")
 
+        except Exception as error:
+            self.data_status = "DATA ERROR"
             self.update_callback(
                 f"DATA ERROR: {error}"
             )
@@ -412,534 +448,306 @@ class TradingBot:
     # ========================================================
 
     def _on_error(self, ws, error):
+        """Handle WebSocket errors without confusing them with market status."""
+
+        if not self.running:
+            return
 
         self.connection_status = "ERROR"
 
-        self.update_callback(
-            f"ERROR: {error}"
-        )
+        # Keep CLOSED state if Deriv already confirmed the market
+        # is closed. Otherwise mark the connection for retry.
+        if self.market_status == "CLOSED":
+            self.data_status = "MARKET CLOSED"
+            self.update_callback("MARKET CLOSED")
+        else:
+            self.data_status = "RECONNECTING"
+            self.update_callback(
+                f"CONNECTION ERROR: {error}"
+            )
 
     # ========================================================
     # CLOSE
     # ========================================================
 
     def _on_close(self, ws, code, msg):
+        """Handle WebSocket closure and allow automatic reconnect."""
 
-        if self.running:
+        if not self.running:
+            self.connection_status = "DISCONNECTED"
+            return
 
-            self.connection_status = "RECONNECTING"
+        self.connection_status = "RECONNECTING"
+
+        # If Deriv previously confirmed XAUUSD is closed,
+        # do not overwrite that useful state with RECONNECTING.
+        if self.market_status == "CLOSED":
+            self.data_status = "MARKET CLOSED"
+            self.update_callback("MARKET CLOSED")
+        else:
             self.data_status = "RECONNECTING"
-
-            self.update_callback(
-                "RECONNECTING..."
-            )
+            self.update_callback("RECONNECTING...")
 
     # ========================================================
-    # EMA
+    # MARKET STATUS
     # ========================================================
 
-    def _ema(self, values, period):
 
+    # ========================================================
+    # INDICATORS + SIGNAL ENGINE
+    # ========================================================
+
+    def _ema_series(self, values, period):
         if len(values) < period:
-            return None
+            return []
 
-        multiplier = 2 / (period + 1)
+        alpha = 2.0 / (period + 1.0)
+        ema = sum(values[:period]) / period
+        result = [ema]
 
-        ema = sum(
-            values[:period]
-        ) / period
+        for value in values[period:]:
+            ema = (value * alpha) + (ema * (1.0 - alpha))
+            result.append(ema)
 
-        for price in values[period:]:
+        return result
 
-            ema = (
-                (price - ema) * multiplier
-            ) + ema
-
-        return ema
-
-    # ========================================================
-    # RSI
-    # ========================================================
-
-    def _rsi(self, values, period=14):
-
-        if len(values) <= period:
+    def _rsi_value(self, values, period=14):
+        if len(values) < period + 1:
             return None
 
         gains = []
         losses = []
 
         for i in range(1, len(values)):
+            change = values[i] - values[i - 1]
+            gains.append(max(change, 0.0))
+            losses.append(max(-change, 0.0))
 
-            change = (
-                values[i] -
-                values[i - 1]
-            )
+        avg_gain = sum(gains[:period]) / period
+        avg_loss = sum(losses[:period]) / period
 
-            if change > 0:
-
-                gains.append(change)
-                losses.append(0)
-
-            else:
-
-                gains.append(0)
-                losses.append(
-                    abs(change)
-                )
-
-        avg_gain = (
-            sum(gains[-period:]) /
-            period
-        )
-
-        avg_loss = (
-            sum(losses[-period:]) /
-            period
-        )
+        for i in range(period, len(gains)):
+            avg_gain = ((avg_gain * (period - 1)) + gains[i]) / period
+            avg_loss = ((avg_loss * (period - 1)) + losses[i]) / period
 
         if avg_loss == 0:
             return 100.0
 
         rs = avg_gain / avg_loss
+        return 100.0 - (100.0 / (1.0 + rs))
 
-        return 100 - (
-            100 / (1 + rs)
-        )
-
-    # ========================================================
-    # MACD
-    # ========================================================
-
-    def _macd(self, values):
-
-        if len(values) < 35:
+    def _atr_value(self, values, period=14):
+        if len(values) < period + 1:
             return None
 
-        ema12 = self._ema(
-            values,
-            12
-        )
+        ranges = [
+            abs(values[i] - values[i - 1])
+            for i in range(1, len(values))
+        ]
 
-        ema26 = self._ema(
-            values,
-            26
-        )
+        atr = sum(ranges[:period]) / period
 
-        if ema12 is None:
-            return None
+        for value in ranges[period:]:
+            atr = ((atr * (period - 1)) + value) / period
 
-        if ema26 is None:
-            return None
-
-        return ema12 - ema26
-
-    # ========================================================
-    # ATR
-    # ========================================================
-
-    def _atr(self, values, period=14):
-
-        if len(values) <= period:
-            return None
-
-        ranges = []
-
-        for i in range(1, len(values)):
-
-            ranges.append(
-                abs(
-                    values[i] -
-                    values[i - 1]
-                )
-            )
-
-        return (
-            sum(ranges[-period:]) /
-            period
-        )
-
-    # ========================================================
-    # CALCULATE SIGNAL
-    # ========================================================
+        return atr
 
     def _calculate(self):
+        try:
+            if self.price is None:
+                return
 
-        # Never generate signals while closed.
+            if len(self.prices) < 35:
+                self.signal = "WAIT"
+                self.signal_strength = (
+                    f"COLLECTING DATA {len(self.prices)}/35"
+                )
+                self.update_callback("COLLECTING XAUUSD DATA...")
+                return
 
-        if self.market_status == "CLOSED":
+            values = list(self.prices)
+            price = self.price
 
-            self.signal = "WAIT"
-            self.signal_strength = "MARKET CLOSED"
+            # EMA 9 / 21
+            ema9_series = self._ema_series(values, 9)
+            ema21_series = self._ema_series(values, 21)
 
-            return
-
-        if len(self.prices) < 35:
-
-            self.signal = "WAIT"
-            self.signal_strength = "BUILDING DATA"
-
-            self.update_callback(
-                "WAIT"
-            )
-
-            return
-
-        values = self.prices
-
-        price = values[-1]
-
-        ema9 = self._ema(
-            values,
-            9
-        )
-
-        ema21 = self._ema(
-            values,
-            21
-        )
-
-        rsi = self._rsi(
-            values,
-            14
-        )
-
-        macd = self._macd(
-            values
-        )
-
-        atr = self._atr(
-            values,
-            14
-        )
-
-        if (
-            ema9 is None
-            or ema21 is None
-            or rsi is None
-            or macd is None
-            or atr is None
-        ):
-
-            self.signal = "WAIT"
-
-            return
-
-        # ----------------------------------------------------
-        # INDICATORS
-        # ----------------------------------------------------
-
-        self.ema9 = f"{ema9:.2f}"
-        self.ema21 = f"{ema21:.2f}"
-        self.rsi = f"{rsi:.1f}"
-        self.macd = f"{macd:.2f}"
-        self.atr = f"{atr:.2f}"
-
-        recent = values[-30:]
-
-        self.support = (
-            f"{min(recent):.2f}"
-        )
-
-        self.resistance = (
-            f"{max(recent):.2f}"
-        )
-
-        # ----------------------------------------------------
-        # MOMENTUM
-        # ----------------------------------------------------
-
-        momentum = (
-            values[-1] -
-            values[-6]
-        )
-
-        buy_confirmations = 0
-        sell_confirmations = 0
-
-        # EMA
-        if ema9 > ema21:
-            buy_confirmations += 1
-
-        elif ema9 < ema21:
-            sell_confirmations += 1
-
-        # RSI
-        if rsi > 50:
-            buy_confirmations += 1
-
-        elif rsi < 50:
-            sell_confirmations += 1
-
-        # MACD
-        if macd > 0:
-            buy_confirmations += 1
-
-        elif macd < 0:
-            sell_confirmations += 1
-
-        # Momentum
-        if momentum > 0:
-            buy_confirmations += 1
-
-        elif momentum < 0:
-            sell_confirmations += 1
-
-        # Price vs EMA
-        if price > ema9:
-            buy_confirmations += 1
-
-        elif price < ema9:
-            sell_confirmations += 1
-
-        self.confirmations = max(
-            buy_confirmations,
-            sell_confirmations
-        )
-
-        if self.confirmations >= 5:
-
-            self.signal_strength = (
-                "VERY STRONG"
-            )
-
-        elif self.confirmations == 4:
-
-            self.signal_strength = (
-                "STRONG"
-            )
-
-        elif self.confirmations == 3:
-
-            self.signal_strength = (
-                "MODERATE"
-            )
-
-        elif self.confirmations == 2:
-
-            self.signal_strength = (
-                "WEAK"
-            )
-
-        else:
-
-            self.signal_strength = (
-                "WAITING"
-            )
-
-        # ----------------------------------------------------
-        # NORMAL SIGNAL
-        # ----------------------------------------------------
-
-        new_signal = "WAIT"
-
-        if buy_confirmations >= 3:
-
-            new_signal = "BUY"
-
-        elif sell_confirmations >= 3:
-
-            new_signal = "SELL"
-
-        # ----------------------------------------------------
-        # STOP BUY
-        # ----------------------------------------------------
-
-        if self.last_signal == "BUY":
-
-            bearish_reversal = (
-                ema9 < ema21
-                and rsi < 50
-                and macd < 0
-            )
-
-            if bearish_reversal:
-
-                new_signal = "STOP BUY"
-
-        # ----------------------------------------------------
-        # STOP SELL
-        # ----------------------------------------------------
-
-        elif self.last_signal == "SELL":
-
-            bullish_reversal = (
-                ema9 > ema21
-                and rsi > 50
-                and macd > 0
-            )
-
-            if bullish_reversal:
-
-                new_signal = "STOP SELL"
-
-        # ----------------------------------------------------
-        # TRADE SETUP
-        # ----------------------------------------------------
-
-        if new_signal == "BUY":
-
-            self.entry = (
-                f"{price:.2f}"
-            )
-
-            stop_distance = max(
-                atr * 1.5,
-                price * 0.002
-            )
-
-            self.sl = (
-                f"{price - stop_distance:.2f}"
-            )
-
-            self.tp1 = (
-                f"{price + stop_distance:.2f}"
-            )
-
-            self.tp2 = (
-                f"{price + stop_distance * 2:.2f}"
-            )
-
-            self.tp3 = (
-                f"{price + stop_distance * 3:.2f}"
-            )
-
-        elif new_signal == "SELL":
-
-            self.entry = (
-                f"{price:.2f}"
-            )
-
-            stop_distance = max(
-                atr * 1.5,
-                price * 0.002
-            )
-
-            self.sl = (
-                f"{price + stop_distance:.2f}"
-            )
-
-            self.tp1 = (
-                f"{price - stop_distance:.2f}"
-            )
-
-            self.tp2 = (
-                f"{price - stop_distance * 2:.2f}"
-            )
-
-            self.tp3 = (
-                f"{price - stop_distance * 3:.2f}"
-            )
-
-        else:
-
-            self.entry = "-"
-            self.sl = "-"
-            self.tp1 = "-"
-            self.tp2 = "-"
-            self.tp3 = "-"
-
-        # ----------------------------------------------------
-        # SIGNAL CHANGE
-        # ----------------------------------------------------
-
-        if new_signal != self.signal:
-
-            self.previous_signal = (
-                self.signal
-            )
-
-            self.signal = new_signal
-
-            self.signal_time = (
-                datetime.now().strftime(
+            if not ema9_series or not ema21_series:
+                return
+
+            ema9 = ema9_series[-1]
+            ema21 = ema21_series[-1]
+
+            self.ema9 = f"{ema9:.2f}"
+            self.ema21 = f"{ema21:.2f}"
+
+            # RSI 14
+            rsi = self._rsi_value(values, 14)
+
+            if rsi is None:
+                return
+
+            self.rsi = f"{rsi:.2f}"
+
+            # MACD
+            ema12 = self._ema_series(values, 12)
+            ema26 = self._ema_series(values, 26)
+
+            if not ema12 or not ema26:
+                return
+
+            macd = ema12[-1] - ema26[-1]
+            self.macd = f"{macd:.4f}"
+
+            # ATR
+            atr = self._atr_value(values, 14)
+
+            if atr is None:
+                return
+
+            atr = max(atr, 0.00001)
+            self.atr = f"{atr:.4f}"
+
+            # Support / resistance
+            recent = values[-min(30, len(values)):]
+            support = min(recent)
+            resistance = max(recent)
+
+            self.support = f"{support:.2f}"
+            self.resistance = f"{resistance:.2f}"
+
+            # Conditions
+            buy_score = 0
+            sell_score = 0
+
+            if ema9 > ema21:
+                buy_score += 1
+            elif ema9 < ema21:
+                sell_score += 1
+
+            if values[-1] > values[-6]:
+                buy_score += 1
+            elif values[-1] < values[-6]:
+                sell_score += 1
+
+            if 50 <= rsi < 70:
+                buy_score += 1
+            elif 30 < rsi <= 50:
+                sell_score += 1
+
+            if macd > 0:
+                buy_score += 1
+            elif macd < 0:
+                sell_score += 1
+
+            midpoint = (support + resistance) / 2.0
+
+            if price > midpoint:
+                buy_score += 1
+            elif price < midpoint:
+                sell_score += 1
+
+            self.confirmations = max(buy_score, sell_score)
+
+            if buy_score >= 4 and buy_score > sell_score:
+                direction = "BUY"
+            elif sell_score >= 4 and sell_score > buy_score:
+                direction = "SELL"
+            else:
+                direction = "WAIT"
+
+            old_signal = self.signal
+            current_signal = direction
+
+            # Stop alerts when the opposite direction appears.
+            if self.last_signal == "BUY" and direction == "SELL":
+                current_signal = "STOP BUY"
+
+            elif self.last_signal == "SELL" and direction == "BUY":
+                current_signal = "STOP SELL"
+
+            # Strength
+            # STOP signals take priority over the new direction.
+            if current_signal == "STOP BUY":
+                self.signal_strength = "EXIT BUY"
+            elif current_signal == "STOP SELL":
+                self.signal_strength = "EXIT SELL"
+            elif direction == "BUY":
+                self.signal_strength = f"BUY {buy_score}/5"
+            elif direction == "SELL":
+                self.signal_strength = f"SELL {sell_score}/5"
+            else:
+                self.signal_strength = f"WAIT {self.confirmations}/5"
+
+            # Trade setup
+            if direction == "BUY":
+                self.entry = f"{price:.2f}"
+
+                sl = price - (atr * 1.5)
+                risk = max(price - sl, 0.00001)
+
+                self.sl = f"{sl:.2f}"
+                self.tp1 = f"{price + risk:.2f}"
+                self.tp2 = f"{price + (risk * 2):.2f}"
+                self.tp3 = f"{price + (risk * 3):.2f}"
+
+            elif direction == "SELL":
+                self.entry = f"{price:.2f}"
+
+                sl = price + (atr * 1.5)
+                risk = max(sl - price, 0.00001)
+
+                self.sl = f"{sl:.2f}"
+                self.tp1 = f"{price - risk:.2f}"
+                self.tp2 = f"{price - (risk * 2):.2f}"
+                self.tp3 = f"{price - (risk * 3):.2f}"
+
+            elif current_signal in ("STOP BUY", "STOP SELL"):
+                self.entry = "-"
+                self.sl = "-"
+                self.tp1 = "-"
+                self.tp2 = "-"
+                self.tp3 = "-"
+
+            else:
+                self.entry = "-"
+                self.sl = "-"
+                self.tp1 = "-"
+                self.tp2 = "-"
+                self.tp3 = "-"
+
+            self.signal = current_signal
+
+            if direction in ("BUY", "SELL"):
+                self.last_signal = direction
+
+            # Alert only when signal changes.
+            if current_signal != old_signal:
+                self.signal_time = datetime.now().strftime(
                     "%Y-%m-%d %H:%M:%S"
                 )
-            )
 
-            self._record_signal(
-                new_signal
-            )
-
-            if new_signal in (
-                "BUY",
-                "SELL",
-                "STOP BUY",
-                "STOP SELL"
-            ):
-
-                self._trigger_alert(
-                    new_signal
+                self.history.append(
+                    f"{self.signal_time} | "
+                    f"{current_signal} | "
+                    f"{price:.2f}"
                 )
 
-        # Remember active direction
-        if new_signal in (
-            "BUY",
-            "SELL"
-        ):
+                if len(self.history) > 20:
+                    self.history.pop(0)
 
-            self.last_signal = (
-                new_signal
+                if current_signal != self.last_alert_signal:
+                    self.alerts.play(current_signal)
+                    self.last_alert_signal = current_signal
+
+            self.update_callback(current_signal)
+
+        except Exception as error:
+            self.data_status = "CALCULATION ERROR"
+            self.update_callback(
+                f"CALCULATION ERROR: {error}"
             )
 
-        self.update_callback(
-            "LIVE"
-        )
-
-    # ========================================================
-    # ALERT
-    # ========================================================
-
-    def _trigger_alert(self, signal):
-
-        if signal == self.last_alert_signal:
-            return
-
-        self.last_alert_signal = signal
-
-        Clock.schedule_once(
-            lambda dt:
-            self.alerts.play(signal),
-            0
-        )
-
-    # ========================================================
-    # SIGNAL HISTORY
-    # ========================================================
-
-    def _record_signal(self, signal):
-
-        if signal == "WAIT":
-            return
-
-        record = {
-            "signal": signal,
-            "price": (
-                f"{self.price:.2f}"
-                if self.price is not None
-                else "-"
-            ),
-            "time": self.signal_time,
-            "strength": (
-                self.signal_strength
-            ),
-            "confirmations": (
-                self.confirmations
-            )
-        }
-
-        self.history.insert(
-            0,
-            record
-        )
-
-        if len(self.history) > 10:
-
-            self.history.pop()
-
-    # ========================================================
-    # MARKET STATUS
-    # ========================================================
 
     def get_market_status(self):
 
@@ -1443,7 +1251,7 @@ class MainScreen(BoxLayout):
             True
         )
 
-        if not market_open:
+        if market_open != "OPEN":
             self.market_label.text = (
                 "MARKET\nCLOSED"
             )
