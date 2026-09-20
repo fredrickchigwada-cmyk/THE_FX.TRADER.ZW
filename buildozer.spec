@@ -17,7 +17,7 @@ fullscreen = 0
 android.permissions = INTERNET,VIBRATE,WAKE_LOCK
 
 android.api = 35
-android.minapi = 23
+android.minapi = 26
 android.archs = arm64-v8a
 
 android.allow_backup = True
