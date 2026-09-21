@@ -1388,6 +1388,13 @@ class MainScreen(BoxLayout):
             1
         )
 
+        # Automatically connect to Deriv when the app opens.
+        # START/STOP buttons remain available for manual control.
+        Clock.schedule_once(
+            lambda dt: self.bot.start(),
+            0.5
+        )
+
     def update_screen(self, data=None):
         self.refresh_ui()
 
