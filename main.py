@@ -201,6 +201,15 @@ class TradingBot:
         self.last_alert_signal = None
         self.last_tick_time = None
 
+        # 1-minute candle engine state
+        self.current_candle_minute = None
+        self.current_candle_open = None
+        self.current_candle_high = None
+        self.current_candle_low = None
+        self.current_candle_close = None
+        self.candle_count = 0
+        self.last_analysis_candle = None
+
     # ========================================================
     # START
     # ========================================================
@@ -257,12 +266,15 @@ class TradingBot:
 
     def _connect(self):
         """Maintain a persistent Deriv WebSocket connection."""
+
         reconnect_delay = 5
 
         while self.running:
             try:
                 self.connection_status = "CONNECTING"
+                self.market_status = "CHECKING"
                 self.data_status = "CONNECTING"
+
                 self.update_callback("CONNECTING TO DERIV...")
 
                 self.ws = websocket.WebSocketApp(
@@ -291,39 +303,56 @@ class TradingBot:
             if self.running:
                 self.connection_status = "RECONNECTING"
 
-                # Do not display RECONNECTING as a market/data error
-                # when Deriv has already told us the market is closed.
+                # Never permanently lock the bot into CLOSED.
+                # Deriv's market state is checked again on every
+                # new connection attempt.
                 if self.market_status == "CLOSED":
                     self.data_status = "MARKET CLOSED"
-                    self.update_callback("MARKET CLOSED")
+                    self.update_callback(
+                        "MARKET CLOSED - WAITING FOR OPEN"
+                    )
                 else:
                     self.data_status = "RECONNECTING"
-                    self.update_callback("RECONNECTING...")
+                    self.update_callback(
+                        "RECONNECTING..."
+                    )
 
                 time.sleep(reconnect_delay)
 
-    # ========================================================
-    # OPEN CONNECTION
-    # ========================================================
-
     def _on_open(self, ws):
-        """Called when the WebSocket connection is established."""
+        """Connect to Deriv and load recent 1-minute XAUUSD candles."""
 
         self.connection_status = "CONNECTED"
-
-        # A connection alone does NOT mean XAUUSD is open.
         self.market_status = "CHECKING"
-        self.data_status = "CHECKING MARKET"
+        self.data_status = "LOADING CANDLES"
 
-        self.update_callback("CHECKING XAUUSD MARKET...")
+        self.update_callback(
+            "LOADING XAUUSD 1M CANDLES..."
+        )
 
-        request = {
+        # Load recent 1-minute candles first.
+        history_request = {
+            "ticks_history": SYMBOL,
+            "end": "latest",
+            "count": 100,
+            "style": "candles",
+            "granularity": 60
+        }
+
+        # Then subscribe to live XAUUSD ticks.
+        tick_request = {
             "ticks": SYMBOL,
             "subscribe": 1
         }
 
         try:
-            ws.send(json.dumps(request))
+            ws.send(json.dumps(history_request))
+            ws.send(json.dumps(tick_request))
+
+            self.update_callback(
+                "HISTORY REQUESTED - STARTING LIVE DATA..."
+            )
+
         except Exception as error:
             self.connection_status = "ERROR"
             self.data_status = "ERROR"
@@ -340,6 +369,48 @@ class TradingBot:
 
         try:
             data = json.loads(message)
+
+            # ------------------------------------------------
+            # HISTORICAL 1-MINUTE CANDLES
+            # ------------------------------------------------
+
+            if data.get("msg_type") == "candles":
+                candles = data.get("candles", [])
+
+                if isinstance(candles, list) and candles:
+                    closed_candles = []
+
+                    for candle in candles[:-1]:
+                        try:
+                            closed_candles.append({
+                                "epoch": int(candle["epoch"]),
+                                "open": float(candle["open"]),
+                                "high": float(candle["high"]),
+                                "low": float(candle["low"]),
+                                "close": float(candle["close"])
+                            })
+                        except (KeyError, TypeError, ValueError):
+                            continue
+
+                    if closed_candles:
+                        self.prices = [
+                            candle["close"]
+                            for candle in closed_candles
+                        ][-300:]
+
+                        self.candle_count = len(self.prices)
+
+                        self.market_status = "OPEN"
+                        self.data_status = "HISTORICAL DATA"
+
+                        self.update_callback(
+                            f"LOADED {self.candle_count} XAUUSD 1M CANDLES"
+                        )
+
+                        # Calculate immediately using the loaded history.
+                        self._calculate()
+
+                return
 
             # ------------------------------------------------
             # DERIV ERROR
@@ -368,6 +439,10 @@ class TradingBot:
                     or error_data.get("subcode") == "MarketIsClosed"
                     or "MarketIsClosed" in error_message
                 ):
+                    # Deriv has confirmed that the XAUUSD
+                    # tick subscription is currently unavailable.
+                    # Mark it closed, but DO NOT permanently stop
+                    # the bot. The reconnect loop will try again.
                     self.market_status = "CLOSED"
                     self.data_status = "MARKET CLOSED"
                     self.connection_status = "CONNECTED"
@@ -380,7 +455,17 @@ class TradingBot:
                     self.tp3 = "-"
                     self.signal_strength = "MARKET CLOSED"
 
-                    self.update_callback("MARKET CLOSED")
+                    self.update_callback(
+                        "MARKET CLOSED - WAITING FOR OPEN"
+                    )
+
+                    # Close this WebSocket so the reconnect loop
+                    # can establish a fresh subscription later.
+                    try:
+                        ws.close()
+                    except Exception:
+                        pass
+
                     return
 
                 self.data_status = "ERROR"
@@ -390,21 +475,13 @@ class TradingBot:
                 return
 
             # ------------------------------------------------
-            # IGNORE NON-TICK MESSAGES
             # ------------------------------------------------
-
-            if data.get("msg_type") != "tick":
-                return
-
-            # ------------------------------------------------
-            # REAL TICK VALIDATION
+            # LIVE 1-MINUTE CANDLE BUILDER
             # ------------------------------------------------
 
             tick = data.get("tick")
 
             if not isinstance(tick, dict):
-                # This prevents a MarketIsClosed response or
-                # malformed message from becoming fake live data.
                 return
 
             if "quote" not in tick:
@@ -415,10 +492,16 @@ class TradingBot:
             except (TypeError, ValueError):
                 return
 
-            # ------------------------------------------------
-            # REAL LIVE DATA
-            # ------------------------------------------------
+            epoch = tick.get("epoch")
 
+            try:
+                epoch = int(epoch) if epoch is not None else int(time.time())
+            except (TypeError, ValueError):
+                epoch = int(time.time())
+
+            candle_minute = epoch // 60
+
+            # Always update the live displayed price.
             self.price = quote
             self.last_tick_time = time.time()
 
@@ -426,26 +509,80 @@ class TradingBot:
             self.market_status = "OPEN"
             self.data_status = "LIVE"
 
-            self.prices.append(quote)
+            # Start the first live candle.
+            if self.current_candle_minute is None:
+                self.current_candle_minute = candle_minute
+                self.current_candle_open = quote
+                self.current_candle_high = quote
+                self.current_candle_low = quote
+                self.current_candle_close = quote
 
-            if len(self.prices) > 300:
-                self.prices.pop(0)
+                self.update_callback(
+                    f"LIVE XAUUSD: {quote:.2f}"
+                )
+                return
 
-            self._calculate()
+            # Same minute: update the current candle.
+            if candle_minute == self.current_candle_minute:
+                self.current_candle_high = max(
+                    self.current_candle_high,
+                    quote
+                )
 
-        except json.JSONDecodeError:
-            self.data_status = "DATA ERROR"
-            self.update_callback("DATA ERROR: INVALID JSON")
+                self.current_candle_low = min(
+                    self.current_candle_low,
+                    quote
+                )
+
+                self.current_candle_close = quote
+
+                self.update_callback(
+                    f"LIVE XAUUSD: {quote:.2f}"
+                )
+                return
+
+            # New minute: close the previous candle.
+            if candle_minute > self.current_candle_minute:
+
+                closed_price = self.current_candle_close
+
+                self.prices.append(closed_price)
+
+                if len(self.prices) > 300:
+                    self.prices.pop(0)
+
+                self.candle_count = len(self.prices)
+
+                # Start the new candle.
+                self.current_candle_minute = candle_minute
+                self.current_candle_open = quote
+                self.current_candle_high = quote
+                self.current_candle_low = quote
+                self.current_candle_close = quote
+
+                # Run the existing signal engine once per
+                # completed 1-minute candle.
+                self._calculate()
+
+                self.update_callback(
+                    f"NEW 1M CANDLE | XAUUSD: {quote:.2f}"
+                )
+
+                return
+
+            # Ignore an out-of-order tick.
+            return
+
+            # ------------------------------------------------
+    # ========================================================
+    # ERROR
+    # ========================================================
 
         except Exception as error:
             self.data_status = "DATA ERROR"
             self.update_callback(
                 f"DATA ERROR: {error}"
             )
-
-    # ========================================================
-    # ERROR
-    # ========================================================
 
     def _on_error(self, ws, error):
         """Handle WebSocket errors without confusing them with market status."""
@@ -710,7 +847,43 @@ class TradingBot:
                 self.tp3 = "-"
 
             else:
-                self.entry = "-"
+                # WAIT: show POTENTIAL setup using the stronger
+                # technical direction, without treating it as confirmed.
+                potential_direction = None
+
+                if buy_score > sell_score:
+                    potential_direction = "BUY"
+                elif sell_score > buy_score:
+                    potential_direction = "SELL"
+
+                if potential_direction == "BUY":
+                    self.entry = f"{price:.2f}"
+
+                    sl = price - (atr * 1.5)
+                    risk = max(price - sl, 0.00001)
+
+                    self.sl = f"{sl:.2f}"
+                    self.tp1 = f"{price + risk:.2f}"
+                    self.tp2 = f"{price + (risk * 2):.2f}"
+                    self.tp3 = f"{price + (risk * 3):.2f}"
+
+                elif potential_direction == "SELL":
+                    self.entry = f"{price:.2f}"
+
+                    sl = price + (atr * 1.5)
+                    risk = max(sl - price, 0.00001)
+
+                    self.sl = f"{sl:.2f}"
+                    self.tp1 = f"{price - risk:.2f}"
+                    self.tp2 = f"{price - (risk * 2):.2f}"
+                    self.tp3 = f"{price - (risk * 3):.2f}"
+
+                else:
+                    self.entry = "-"
+                    self.sl = "-"
+                    self.tp1 = "-"
+                    self.tp2 = "-"
+                    self.tp3 = "-"
                 self.sl = "-"
                 self.tp1 = "-"
                 self.tp2 = "-"
