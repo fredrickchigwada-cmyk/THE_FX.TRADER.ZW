@@ -63,17 +63,19 @@ jobs:
           test -d "$ANDROID_HOME/build-tools/35.0.0"
 
           echo "[OK] Android 35 platform"
-          echo "[OK] Build tools 35.0.0"
+          echo "[OK] Build Tools 35.0.0"
 
       - name: Verify Android source
         run: |
           set -e
 
+          test -f android_app/build.gradle
+          test -f android_app/settings.gradle
           test -f android_app/app/build.gradle
           test -f android_app/app/src/main/AndroidManifest.xml
           test -f android_app/app/src/main/java/com/thefxtrader/botzw/MainActivity.java
 
-          echo "[OK] Android source"
+          echo "[OK] Android source verified"
 
       - name: Build Debug APK
         working-directory: android_app
