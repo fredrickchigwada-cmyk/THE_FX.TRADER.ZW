@@ -1,0 +1,193 @@
+import time
+
+from core.signal_engine import Signal
+from core.alert_config import AlertConfig
+from core.alert_manager import AlertManager
+from core.alert_feedback import AlertFeedback
+from core.signal_alert_router import SignalAlertRouter
+
+
+def make_signal(direction, valid, strength=8, confirmed=True):
+    return Signal(
+        symbol="frxXAUUSD",
+        timeframe="M1",
+        direction=direction,
+        strength=strength,
+        confirmations=5,
+        entry=4340.0,
+        stop_loss=4337.0 if direction == "BUY" else 4343.0,
+        tp1=4343.0 if direction == "BUY" else 4337.0,
+        tp2=4346.0 if direction == "BUY" else 4334.0,
+        invalidation=4337.0 if direction == "BUY" else 4343.0,
+        explanation="STAGE 16V TEST",
+        candle_confirmed=confirmed,
+        valid=valid,
+    )
+
+
+config = AlertConfig()
+config.alerts_enabled = True
+config.buy_enabled = True
+config.sell_enabled = True
+config.wait_enabled = False
+config.minimum_strength = 6
+
+manager = AlertManager()
+feedback = AlertFeedback()
+
+router = SignalAlertRouter(
+    config,
+    manager,
+    feedback,
+)
+
+print("=" * 70)
+print(" STAGE 16V — ALERT SAFETY CORRECTION")
+print("=" * 70)
+
+print("\n[1] WAIT SIGNAL")
+
+wait_signal = make_signal(
+    "WAIT",
+    False,
+    strength=0,
+    confirmed=False,
+)
+
+wait_result = router.route(
+    wait_signal,
+    now=time.time(),
+)
+
+print("WAIT routed       :", bool(wait_result))
+print("Expected          : BLOCKED")
+
+assert wait_result.status == "BLOCKED", "WAIT must never route as an alert"
+
+
+print("\n[2] INVALID BUY")
+
+invalid_buy = make_signal(
+    "BUY",
+    False,
+    strength=8,
+    confirmed=True,
+)
+
+invalid_result = router.route(
+    invalid_buy,
+    now=time.time() + 1,
+)
+
+print("Invalid BUY routed:", bool(invalid_result))
+print("Expected          : BLOCKED")
+
+assert invalid_result.status == "BLOCKED", "Invalid BUY must be blocked"
+
+
+print("\n[3] INVALID SELL")
+
+invalid_sell = make_signal(
+    "SELL",
+    False,
+    strength=8,
+    confirmed=True,
+)
+
+invalid_sell_result = router.route(
+    invalid_sell,
+    now=time.time() + 2,
+)
+
+print("Invalid SELL routed:", bool(invalid_sell_result))
+print("Expected           : BLOCKED")
+
+assert invalid_sell_result.status == "BLOCKED", "Invalid SELL must be blocked"
+
+
+print("\n[4] WEAK BUY")
+
+weak_buy = make_signal(
+    "BUY",
+    True,
+    strength=5,
+    confirmed=True,
+)
+
+weak_result = router.route(
+    weak_buy,
+    now=time.time() + 3,
+)
+
+print("Weak BUY routed   :", bool(weak_result))
+print("Expected          : BLOCKED")
+
+assert weak_result.status == "BLOCKED", "Weak BUY must be blocked"
+
+
+print("\n[5] VALID BUY")
+
+valid_buy = make_signal(
+    "BUY",
+    True,
+    strength=8,
+    confirmed=True,
+)
+
+buy_result = router.route(
+    valid_buy,
+    now=time.time() + 10,
+)
+
+print("Valid BUY routed  :", bool(buy_result))
+print("Expected          : ALLOWED")
+
+assert buy_result.status == "ALLOWED", "Valid BUY should be allowed"
+
+
+print("\n[6] VALID SELL")
+
+valid_sell = make_signal(
+    "SELL",
+    True,
+    strength=8,
+    confirmed=True,
+)
+
+sell_result = router.route(
+    valid_sell,
+    now=time.time() + 20,
+)
+
+print("Valid SELL routed :", bool(sell_result))
+print("Expected          : ALLOWED")
+
+assert sell_result.status == "ALLOWED", "Valid SELL should be allowed"
+
+
+print("\n[7] ALERT SETTINGS")
+
+print("Alerts enabled    :", config.alerts_enabled)
+print("BUY enabled       :", config.buy_enabled)
+print("SELL enabled      :", config.sell_enabled)
+print("WAIT enabled      :", config.wait_enabled)
+print("Minimum strength  :", config.minimum_strength)
+
+
+print("\n" + "=" * 70)
+print(" STAGE 16V SUMMARY")
+print("=" * 70)
+
+print("WAIT blocked       : PASSED")
+print("Invalid BUY blocked: PASSED")
+print("Invalid SELL blocked: PASSED")
+print("Weak BUY blocked   : PASSED")
+print("Valid BUY allowed  : PASSED")
+print("Valid SELL allowed : PASSED")
+print("Alert safety       : PASSED")
+print("Trade execution    : DISABLED")
+print("Signal-only mode   : ENABLED")
+print("=" * 70)
+
+print("\nSTAGE 16V: PASSED")
+print("=" * 70)

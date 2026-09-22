@@ -1,0 +1,274 @@
+import time
+from dataclasses import dataclass
+from typing import Dict, List, Optional
+
+
+@dataclass
+class DiscoveredMarket:
+    requested_name: str
+    symbol: Optional[str]
+    display_name: str
+    available: bool
+    exchange_is_open: Optional[bool] = None
+    trading_suspended: Optional[bool] = None
+    last_checked: float = 0.0
+
+
+class MarketDiscovery:
+    """
+    Converts Deriv's active-symbol response into the markets
+    requested by THE_FX.TRADER.BOT.ZW.
+
+    This module only discovers market information.
+    It cannot place, modify, or close trades.
+    """
+
+    REQUESTED_MARKETS = [
+        "BTCUSD",
+        "XAUUSD",
+        "STEP INDEX",
+        "VOLATILITY 75",
+
+        "VOLATILITY 10",
+        "VOLATILITY 25",
+        "VOLATILITY 50",
+        "VOLATILITY 100",
+
+        "BOOM 500",
+        "BOOM 1000",
+        "CRASH 500",
+        "CRASH 1000",
+
+        "EURUSD",
+        "GBPUSD",
+        "USDJPY",
+        "NAS100",
+        "US30",
+    ]
+
+    def __init__(self):
+        self.markets: Dict[str, DiscoveredMarket] = {}
+        self.last_discovery_time = 0.0
+
+    @staticmethod
+    def normalize(value: str) -> str:
+        """
+        Normalize names so comparisons are tolerant of:
+        spaces, underscores, hyphens and capitalization.
+        """
+        if not value:
+            return ""
+
+        value = str(value).upper()
+
+        for char in ("_", "-", "/"):
+            value = value.replace(char, " ")
+
+        return " ".join(value.split())
+
+    @classmethod
+    def _matches(cls, requested: str, symbol_data: dict) -> bool:
+        requested_normalized = cls.normalize(requested)
+
+        symbol = cls.normalize(
+            symbol_data.get("symbol", "")
+        )
+
+        underlying_symbol = cls.normalize(
+            symbol_data.get("underlying_symbol", "")
+        )
+
+        display_name = cls.normalize(
+            symbol_data.get("display_name", "")
+        )
+
+        underlying_name = cls.normalize(
+            symbol_data.get("underlying_symbol_name", "")
+        )
+
+        candidates = {
+            symbol,
+            underlying_symbol,
+            display_name,
+            underlying_name,
+        }
+
+        # Exact normalized match.
+        if requested_normalized in candidates:
+            return True
+
+        # Deriv forex/metals symbols may use the "frx" prefix.
+        # Example: frxXAUUSD -> XAUUSD
+        raw_symbol = str(symbol_data.get("symbol", "")).upper()
+
+        if raw_symbol.startswith("FRX"):
+            frx_base = raw_symbol[3:]
+            if frx_base == requested_normalized:
+                return True
+
+        # Common Deriv naming variations.
+        aliases = {
+            "STEP INDEX": {
+                "STEP INDEX",
+                "STEP INDEX 100",
+                "STEP100",
+            },
+            "VOLATILITY 75": {
+                "VOLATILITY 75",
+                "VOLATILITY 75 INDEX",
+                "VOLATILITY75",
+                "VOL75",
+            },
+            "VOLATILITY 10": {
+                "VOLATILITY 10",
+                "VOLATILITY 10 INDEX",
+                "VOLATILITY10",
+                "VOL10",
+            },
+            "VOLATILITY 25": {
+                "VOLATILITY 25",
+                "VOLATILITY 25 INDEX",
+                "VOLATILITY25",
+                "VOL25",
+            },
+            "VOLATILITY 50": {
+                "VOLATILITY 50",
+                "VOLATILITY 50 INDEX",
+                "VOLATILITY50",
+                "VOL50",
+            },
+            "VOLATILITY 100": {
+                "VOLATILITY 100",
+                "VOLATILITY 100 INDEX",
+                "VOLATILITY100",
+                "VOL100",
+            },
+            "BOOM 500": {
+                "BOOM 500",
+                "BOOM500",
+            },
+            "BOOM 1000": {
+                "BOOM 1000",
+                "BOOM1000",
+            },
+            "CRASH 500": {
+                "CRASH 500",
+                "CRASH500",
+            },
+            "CRASH 1000": {
+                "CRASH 1000",
+                "CRASH1000",
+            },
+            "NAS100": {
+                "NAS100",
+                "NASDAQ",
+                "NASDAQ 100",
+            },
+            "US30": {
+                "US30",
+                "DOW JONES",
+                "DOW 30",
+            },
+        }
+
+        if requested_normalized in aliases:
+            if candidates.intersection(aliases[requested_normalized]):
+                return True
+
+        return False
+
+    def process_response(self, data: dict) -> List[DiscoveredMarket]:
+        """
+        Process an active_symbols response without making
+        another network request.
+        """
+
+        active_symbols = data.get("active_symbols")
+
+        if not isinstance(active_symbols, list):
+            return []
+
+        now = time.time()
+        discovered = []
+
+        for requested in self.REQUESTED_MARKETS:
+
+            match = None
+
+            for item in active_symbols:
+                if not isinstance(item, dict):
+                    continue
+
+                if self._matches(requested, item):
+                    match = item
+                    break
+
+            if match:
+                market = DiscoveredMarket(
+                    requested_name=requested,
+                    symbol=(
+                        match.get("underlying_symbol")
+                        or match.get("symbol")
+                    ),
+                    display_name=(
+                        match.get("underlying_symbol_name")
+                        or match.get("display_name")
+                        or requested
+                    ),
+                    available=True,
+                    exchange_is_open=match.get(
+                        "exchange_is_open"
+                    ),
+                    trading_suspended=match.get(
+                        "is_trading_suspended"
+                    ),
+                    last_checked=now,
+                )
+            else:
+                market = DiscoveredMarket(
+                    requested_name=requested,
+                    symbol=None,
+                    display_name=requested,
+                    available=False,
+                    last_checked=now,
+                )
+
+            self.markets[requested] = market
+            discovered.append(market)
+
+        self.last_discovery_time = now
+
+        return discovered
+
+    def get(self, requested_name: str) -> Optional[DiscoveredMarket]:
+        return self.markets.get(requested_name)
+
+    def is_available(self, requested_name: str) -> bool:
+        market = self.get(requested_name)
+
+        return bool(
+            market and market.available
+        )
+
+    def status(self, requested_name: str) -> str:
+        market = self.get(requested_name)
+
+        if market is None:
+            return "CHECKING"
+
+        if not market.available:
+            return "UNAVAILABLE"
+
+        if market.trading_suspended is True:
+            return "CLOSED"
+
+        if market.exchange_is_open is False:
+            return "CLOSED"
+
+        if market.exchange_is_open is True:
+            return "OPEN"
+
+        return "ACTIVE"
+
+    def all_markets(self) -> List[DiscoveredMarket]:
+        return list(self.markets.values())

@@ -1,0 +1,189 @@
+"""
+THE_FX.TRADER.BOT.ZW
+Stage 14 — Integration Pipeline
+
+Connects signal protection, alerts and journal without
+adding trade execution.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from core.news_signal_confirmation import NewsSignalConfirmation
+
+
+@dataclass
+class PipelineResult:
+    status: str
+    signal: str
+    strength: float
+    confirmations: int
+    journaled: bool
+    alerted: bool
+    explanation: str
+
+
+class IntegrationPipeline:
+
+    def __init__(
+        self,
+        system,
+        protected_engine=None,
+        alert_dispatcher=None,
+        news_confirmation=None,
+    ):
+        self.system = system
+        self.protected_engine = protected_engine
+        self.alert_dispatcher = alert_dispatcher
+        self.news_confirmation = (
+            news_confirmation
+            if news_confirmation is not None
+            else NewsSignalConfirmation()
+        )
+
+    def process_signal(
+        self,
+        signal,
+        news_risk="LOW",
+        news_bias="NEUTRAL",
+    ):
+
+        # Signal uses "direction" as its canonical field.
+        # Keep "signal" as a compatibility fallback.
+        signal_name = str(
+            getattr(
+                signal,
+                "direction",
+                getattr(signal, "signal", "WAIT"),
+            )
+        ).upper()
+
+        strength = float(
+            getattr(signal, "strength", 0)
+        )
+
+        confirmations = int(
+            getattr(signal, "confirmations", 0)
+        )
+
+        explanation = str(
+            getattr(signal, "explanation", "")
+        )
+
+        # Emergency stop remains the first safety gate.
+        if self.system.emergency_stop:
+            return PipelineResult(
+                status="EMERGENCY_STOP",
+                signal="WAIT",
+                strength=0,
+                confirmations=0,
+                journaled=False,
+                alerted=False,
+                explanation="SYSTEM_EMERGENCY_STOP",
+            )
+
+        # News is a confirmation/risk layer only.
+        news_result = self.news_confirmation.evaluate(
+            signal=signal_name,
+            strength=int(strength),
+            news_risk=news_risk,
+            news_bias=news_bias,
+        )
+
+        final_signal = news_result.final_signal
+
+        # If news invalidates a directional technical signal,
+        # convert the pipeline signal to a safe WAIT.
+        if final_signal == "WAIT" and signal_name in {"BUY", "SELL"}:
+            return PipelineResult(
+                status="NEWS_BLOCKED",
+                signal="WAIT",
+                strength=0,
+                confirmations=confirmations,
+                journaled=False,
+                alerted=False,
+                explanation=(
+                    f"{explanation} | "
+                    f"NEWS: {news_result.reason}"
+                ).strip(),
+            )
+
+        # WAIT remains WAIT and is not sent to Android.
+        if final_signal == "WAIT":
+            return PipelineResult(
+                status="PROCESSED",
+                signal="WAIT",
+                strength=strength,
+                confirmations=confirmations,
+                journaled=False,
+                alerted=False,
+                explanation=(
+                    f"{explanation} | "
+                    f"NEWS: {news_result.reason}"
+                ).strip(),
+            )
+
+        record = self.system.accept_signal(
+            signal=final_signal,
+            strength=strength,
+            confirmations=confirmations,
+            entry=getattr(signal, "entry", None),
+            stop_loss=getattr(
+                signal,
+                "stop_loss",
+                None,
+            ),
+            tp1=getattr(signal, "tp1", None),
+            tp2=getattr(signal, "tp2", None),
+            setup=getattr(
+                signal,
+                "setup",
+                "",
+            ),
+            explanation=(
+                f"{explanation} | "
+                f"NEWS: {news_result.reason}"
+            ).strip(),
+        )
+
+        if record is None:
+            return PipelineResult(
+                status="BLOCKED",
+                signal="WAIT",
+                strength=0,
+                confirmations=0,
+                journaled=False,
+                alerted=False,
+                explanation="SIGNAL_BLOCKED",
+            )
+
+        alerted = False
+
+        # Existing alert dispatcher remains responsible for
+        # Android notification/vibration.
+        if (
+            self.alert_dispatcher is not None
+            and final_signal in {"BUY", "SELL"}
+        ):
+            try:
+                result = self.alert_dispatcher.dispatch(
+                    signal
+                )
+                alerted = bool(result)
+
+            except Exception:
+                alerted = False
+
+        return PipelineResult(
+            status="PROCESSED",
+            signal=final_signal,
+            strength=strength,
+            confirmations=confirmations,
+            journaled=True,
+            alerted=alerted,
+            explanation=(
+                f"{explanation} | "
+                f"NEWS: {news_result.reason}"
+            ).strip(),
+        )
+

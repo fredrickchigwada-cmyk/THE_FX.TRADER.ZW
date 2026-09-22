@@ -1,0 +1,109 @@
+import time
+import unittest
+
+from core.deriv_ws import DerivWebSocket, DerivRateLimitError
+
+
+class XAUUSDLiveTest(unittest.TestCase):
+
+    def test_xauusd_market_data(self):
+        connected = []
+        ticks = []
+        errors = []
+
+        def on_open():
+            connected.append(True)
+            print("[XAUUSD] WebSocket connected")
+
+        def on_message(data):
+            print(f"[XAUUSD] Message: {data}")
+
+            if data.get("msg_type") == "tick":
+                tick = data.get("tick", {})
+
+                if tick.get("symbol") == "frxXAUUSD":
+                    ticks.append(tick)
+
+        def on_error(error):
+            errors.append(error)
+            print(f"[XAUUSD] ERROR: {error!r}")
+
+        client = DerivWebSocket(
+            on_open=on_open,
+            on_message=on_message,
+            on_error=on_error,
+        )
+
+        try:
+            client.connect()
+
+            deadline = time.time() + 10
+
+            while time.time() < deadline:
+                if connected:
+                    break
+                time.sleep(0.25)
+
+            self.assertTrue(
+                connected,
+                "Could not connect to Deriv."
+            )
+
+            print("[XAUUSD] Testing frxXAUUSD")
+
+            try:
+                client.subscribe_ticks("frxXAUUSD")
+            except DerivRateLimitError as exc:
+                self.skipTest(
+                    f"Deriv rate protection active: {exc}"
+                )
+
+            deadline = time.time() + 10
+
+            while time.time() < deadline:
+
+                if ticks:
+                    tick = ticks[-1]
+
+                    print()
+                    print("========== XAUUSD VERIFIED ==========")
+                    print(f"Symbol : {tick.get('symbol')}")
+                    print(f"Quote  : {tick.get('quote')}")
+                    print(f"Bid    : {tick.get('bid')}")
+                    print(f"Ask    : {tick.get('ask')}")
+                    print(f"Epoch  : {tick.get('epoch')}")
+                    print("=====================================")
+                    print()
+
+                    return
+
+                # Don't wait unnecessarily after a server error.
+                if errors:
+                    for error in errors:
+                        if isinstance(
+                            error,
+                            DerivRateLimitError
+                        ):
+                            self.skipTest(
+                                "Deriv rate limit is active."
+                            )
+
+                    break
+
+                time.sleep(0.25)
+
+            if errors:
+                self.fail(
+                    f"Deriv returned: {errors}"
+                )
+
+            self.fail(
+                "No XAUUSD tick received."
+            )
+
+        finally:
+            client.stop()
+
+
+if __name__ == "__main__":
+    unittest.main(verbosity=2)

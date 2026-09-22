@@ -1,0 +1,312 @@
+from dataclasses import dataclass
+from typing import Optional
+
+from core.alert_config import AlertConfig
+from core.alert_manager import AlertEvent, AlertManager
+from core.alert_feedback import AlertFeedback
+from core.signal_engine import Signal
+
+
+@dataclass
+class RoutedAlert:
+    signal: Signal
+    alert: Optional[AlertEvent]
+    feedback: Optional[object]
+    status: str
+    reason: str
+
+
+class SignalAlertRouter:
+    """
+    Connects validated signals to the alert system.
+
+    Pipeline:
+
+    SIGNAL
+       ↓
+    ALERT MASTER SWITCH
+       ↓
+    MARKET FILTER
+       ↓
+    TIMEFRAME FILTER
+       ↓
+    DIRECTION FILTER
+       ↓
+    STRENGTH FILTER
+       ↓
+    COOLDOWN
+       ↓
+    ALERT + FEEDBACK
+
+    SIGNAL-ONLY:
+    This router cannot place, modify, or close trades.
+    """
+
+    def __init__(
+        self,
+        config: Optional[AlertConfig] = None,
+        manager: Optional[AlertManager] = None,
+        feedback: Optional[AlertFeedback] = None,
+    ):
+
+        self.config = (
+            config
+            or AlertConfig()
+        )
+
+        self.manager = (
+            manager
+            or AlertManager(
+                buy_enabled=self.config.buy_enabled,
+                sell_enabled=self.config.sell_enabled,
+                wait_enabled=self.config.wait_enabled,
+                minimum_strength=self.config.minimum_strength,
+                cooldown_seconds=self.config.cooldown_seconds,
+            )
+        )
+
+        self.feedback = (
+            feedback
+            or AlertFeedback(
+                sound_enabled=self.config.sound_enabled,
+                vibration_enabled=self.config.vibration_enabled,
+            )
+        )
+
+    # =================================================
+    # SYNC CONFIGURATION
+    # =================================================
+
+    def sync_config(self):
+
+        self.manager.set_direction_enabled(
+            "BUY",
+            self.config.buy_enabled,
+        )
+
+        self.manager.set_direction_enabled(
+            "SELL",
+            self.config.sell_enabled,
+        )
+
+        self.manager.set_direction_enabled(
+            "WAIT",
+            self.config.wait_enabled,
+        )
+
+        self.manager.set_minimum_strength(
+            self.config.minimum_strength
+        )
+
+        self.manager.set_cooldown(
+            self.config.cooldown_seconds
+        )
+
+        self.feedback.set_sound_enabled(
+            self.config.sound_enabled
+        )
+
+        self.feedback.set_vibration_enabled(
+            self.config.vibration_enabled
+        )
+
+    # =================================================
+    # ROUTE SIGNAL
+    # =================================================
+
+    def route(
+        self,
+        signal: Signal,
+        now: Optional[float] = None,
+    ) -> RoutedAlert:
+
+        self.sync_config()
+
+        # ---------------------------------------------
+        # Signal validity
+        # ---------------------------------------------
+
+        if not signal.valid:
+
+            return RoutedAlert(
+                signal=signal,
+                alert=None,
+                feedback=None,
+                status="BLOCKED",
+                reason="INVALID_SIGNAL",
+            )
+
+        # ---------------------------------------------
+        # Master switch
+        # ---------------------------------------------
+
+        if not self.config.alerts_enabled:
+
+            return RoutedAlert(
+                signal=signal,
+                alert=None,
+                feedback=None,
+                status="BLOCKED",
+                reason="ALERTS_DISABLED",
+            )
+
+        # ---------------------------------------------
+        # Market filter
+        # ---------------------------------------------
+
+        if not self.config.market_enabled(
+            signal.symbol
+        ):
+
+            return RoutedAlert(
+                signal=signal,
+                alert=None,
+                feedback=None,
+                status="BLOCKED",
+                reason="MARKET_DISABLED",
+            )
+
+        # ---------------------------------------------
+        # Timeframe filter
+        # ---------------------------------------------
+
+        if not self.config.timeframe_enabled(
+            signal.timeframe
+        ):
+
+            return RoutedAlert(
+                signal=signal,
+                alert=None,
+                feedback=None,
+                status="BLOCKED",
+                reason="TIMEFRAME_DISABLED",
+            )
+
+        # ---------------------------------------------
+        # Direction / strength / cooldown
+        # ---------------------------------------------
+
+        alert = self.manager.create_alert(
+            symbol=signal.symbol,
+            timeframe=signal.timeframe,
+            direction=signal.direction,
+            strength=signal.strength,
+            message=(
+                f"{signal.direction} "
+                f"{signal.symbol} "
+                f"{signal.timeframe} "
+                f"Strength {signal.strength}/10"
+            ),
+            now=now,
+        )
+
+        if alert is None:
+
+            allowed, reason = (
+                self.manager.should_alert(
+                    direction=signal.direction,
+                    strength=signal.strength,
+                    symbol=signal.symbol,
+                    timeframe=signal.timeframe,
+                    now=now,
+                )
+            )
+
+            return RoutedAlert(
+                signal=signal,
+                alert=None,
+                feedback=None,
+                status="BLOCKED",
+                reason=reason,
+            )
+
+        # ---------------------------------------------
+        # Feedback
+        # ---------------------------------------------
+
+        feedback = (
+            self.feedback.build_feedback(
+                direction=signal.direction,
+                now=now,
+            )
+        )
+
+        return RoutedAlert(
+            signal=signal,
+            alert=alert,
+            feedback=feedback,
+            status="ALERT_CREATED",
+            reason="ALERT_ALLOWED",
+        )
+
+    # =================================================
+    # TEST ALERT
+    # =================================================
+
+    def test_alert(
+        self,
+        direction: str = "BUY",
+        now: Optional[float] = None,
+    ):
+
+        self.sync_config()
+
+        alert = self.manager.test_alert(
+            direction=direction,
+            now=now,
+        )
+
+        feedback = self.feedback.test_alert(
+            now=now,
+        )
+
+        return alert, feedback
+
+    # =================================================
+    # HISTORY
+    # =================================================
+
+    def alert_history(self):
+
+        return self.manager.all_events()
+
+    def feedback_history(self):
+
+        return self.feedback.all_events()
+
+    def latest_alert(self):
+
+        return self.manager.latest()
+
+    # =================================================
+    # SETTINGS
+    # =================================================
+
+    def settings(self):
+
+        self.sync_config()
+
+        return {
+            "config": self.config.to_dict(),
+            "manager": self.manager.settings(),
+            "feedback": self.feedback.settings(),
+        }
+
+
+if __name__ == "__main__":
+
+    print(
+        "THE_FX.TRADER.BOT.ZW"
+    )
+
+    print(
+        "Stage 10D - Signal Alert Router"
+    )
+
+    print(
+        "Signal-only mode: ENABLED"
+    )
+
+    print(
+        "Automatic trading: DISABLED"
+    )

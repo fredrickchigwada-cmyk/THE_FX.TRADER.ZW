@@ -1,0 +1,234 @@
+import time
+import json
+
+from core.deriv_rate_limit import DerivRateLimitGuard
+from core.signal_protection import SignalProtection
+from core.signal_lifecycle import SignalLifecycle
+from core.deriv_ws import DerivWebSocket
+
+
+SYMBOL = "frxXAUUSD"
+errors = []
+
+print("=" * 70)
+print("STAGE 16Y — RECOVERY & FAULT-SAFETY TEST")
+print("=" * 70)
+
+# ------------------------------------------------------------
+# 1. RATE-LIMIT RECOVERY
+# ------------------------------------------------------------
+try:
+    guard = DerivRateLimitGuard(base_backoff=0.1, max_backoff=1.0)
+
+    assert guard.can_retry()
+
+    detected = guard.detect({
+        "error": {
+            "code": "RateLimit",
+            "message": "test rate limit"
+        }
+    })
+
+    assert detected
+    assert not guard.can_retry()
+
+    time.sleep(1.1)
+
+    assert guard.can_retry()
+
+    guard.reset()
+
+    print("Rate-limit recovery     : PASSED")
+except Exception as exc:
+    print(f"Rate-limit recovery     : FAILED — {exc}")
+    errors.append(f"rate-limit recovery: {exc}")
+
+# ------------------------------------------------------------
+# 2. STALE-DATA SAFETY
+# ------------------------------------------------------------
+try:
+    protection = SignalProtection()
+
+    old_timestamp = time.time() - 120
+
+    stale = protection.protect_from_stale_data(old_timestamp)
+
+    assert stale
+
+    print("Stale-data protection   : PASSED")
+except Exception as exc:
+    print(f"Stale-data protection   : FAILED — {exc}")
+    errors.append(f"stale-data protection: {exc}")
+
+# ------------------------------------------------------------
+# 3. SIGNAL LIFECYCLE SAFETY
+# ------------------------------------------------------------
+try:
+    lifecycle = SignalLifecycle()
+
+    methods = [
+        "all_events",
+        "clear",
+        "events_for",
+        "latest",
+        "record_state",
+        "signal_active",
+        "signal_cleared",
+        "signal_created",
+        "signal_expired",
+        "signal_invalidated",
+    ]
+
+    missing = [m for m in methods if not hasattr(lifecycle, m)]
+
+    assert not missing, f"missing methods: {missing}"
+
+    lifecycle.clear()
+
+    assert isinstance(lifecycle.all_events(), list)
+
+    print("Signal lifecycle        : PASSED")
+except Exception as exc:
+    print(f"Signal lifecycle        : FAILED — {exc}")
+    errors.append(f"lifecycle: {exc}")
+
+# ------------------------------------------------------------
+# 4. WEBSOCKET RATE-LIMIT BLOCKING
+# ------------------------------------------------------------
+try:
+    ws = DerivWebSocket()
+
+    assert hasattr(ws, "rate_limit_guard")
+
+    ws.rate_limit_guard.detect({
+        "error": {
+            "code": "RateLimit",
+            "message": "simulated rate limit"
+        }
+    })
+
+    blocked = False
+
+    try:
+        ws.subscribe_ticks(SYMBOL)
+    except RuntimeError as exc:
+        blocked = "rate-limited" in str(exc).lower()
+
+    finally:
+        ws.stop()
+
+    assert blocked
+
+    print("WebSocket rate blocking : PASSED")
+except Exception as exc:
+    print(f"WebSocket rate blocking : FAILED — {exc}")
+    errors.append(f"websocket rate blocking: {exc}")
+
+# ------------------------------------------------------------
+# 5. LIVE XAUUSD RECOVERY CHECK
+# ------------------------------------------------------------
+ws = None
+ticks = 0
+latest_price = None
+rate_limited = False
+live_errors = 0
+
+
+def handle_message(message):
+    global ticks, latest_price, rate_limited, live_errors
+
+    try:
+        data = json.loads(message) if isinstance(message, str) else message
+
+        if not isinstance(data, dict):
+            return
+
+        if "error" in data:
+            err = data["error"]
+            text = str(err)
+
+            if "RateLimit" in text or "rate limit" in text.lower():
+                rate_limited = True
+
+            return
+
+        if data.get("msg_type") == "tick" and "tick" in data:
+            tick = data["tick"]
+
+            if tick.get("symbol") == SYMBOL:
+                quote = tick.get("quote")
+
+                if quote is not None:
+                    latest_price = float(quote)
+                    ticks += 1
+
+    except Exception:
+        live_errors += 1
+
+
+try:
+    print()
+    print("Live XAUUSD recovery check")
+    print("Connecting...")
+
+    ws = DerivWebSocket()
+    ws.on_message_callback = handle_message
+
+    ws.connect()
+
+    print("Connection             : PASSED")
+
+    time.sleep(2)
+
+    try:
+        ws.subscribe_ticks(SYMBOL)
+        print("Subscription           : SENT")
+    except Exception as exc:
+        print(f"Subscription           : BLOCKED — {exc}")
+        rate_limited = True
+
+    start = time.time()
+
+    while time.time() - start < 30:
+        time.sleep(1)
+
+    print(f"Live ticks             : {ticks}")
+    print(f"Latest XAUUSD          : {latest_price}")
+    print(f"Rate limited           : {rate_limited}")
+    print(f"Live processing errors : {live_errors}")
+
+    if ticks == 0:
+        errors.append("no live XAUUSD ticks received")
+    if live_errors != 0:
+        errors.append("live message processing errors detected")
+
+except Exception as exc:
+    print(f"Live XAUUSD check       : FAILED — {exc}")
+    errors.append(f"live XAUUSD: {exc}")
+
+finally:
+    if ws is not None:
+        try:
+            ws.stop()
+        except Exception:
+            pass
+
+# ------------------------------------------------------------
+# FINAL RESULT
+# ------------------------------------------------------------
+print()
+print("=" * 70)
+
+if not errors:
+    print("STAGE 16Y: PASSED")
+else:
+    print("STAGE 16Y: FAILED")
+    print("Errors:")
+    for error in errors:
+        print(f"- {error}")
+
+print("=" * 70)
+print("Signal-only mode        : ENABLED")
+print("Trade execution         : DISABLED")
+print("XAUUSD remains primary market.")
+print("=" * 70)

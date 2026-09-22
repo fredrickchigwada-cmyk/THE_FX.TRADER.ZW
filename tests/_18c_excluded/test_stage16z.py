@@ -1,0 +1,399 @@
+import json
+import time
+from pathlib import Path
+
+from core.deriv_ws import DerivWebSocket
+from core.deriv_rate_limit import DerivRateLimitGuard
+from core.market_data import MarketDataStore
+from core.candle_engine import CandleEngine
+from core.signal_engine import SignalEngine
+from core.signal_protection import SignalProtection
+from core.signal_lifecycle import SignalLifecycle
+from core.candle_close_protection import CandleCloseProtection
+from core.full_system import FullSystem
+from core.integration_pipeline import IntegrationPipeline
+from core.signal_journal import SignalJournal
+from core.alert_config import AlertConfig
+from core.alert_manager import AlertManager
+from core.signal_alert_router import SignalAlertRouter
+from core.alert_feedback import AlertFeedback
+
+
+SYMBOL = "frxXAUUSD"
+DISPLAY = "XAUUSD"
+TIMEFRAME = "M1"
+LIVE_SECONDS = 60
+
+errors = []
+ticks = 0
+latest_price = None
+latest_epoch = None
+rate_limited = False
+processing_errors = 0
+
+print("=" * 70)
+print("STAGE 16Z — FULL SYSTEM STRESS TEST")
+print("=" * 70)
+
+# ------------------------------------------------------------
+# COMPONENT INITIALIZATION
+# ------------------------------------------------------------
+try:
+    market_data = MarketDataStore()
+    candle_engine = CandleEngine()
+    signal_engine = SignalEngine()
+    protection = SignalProtection()
+    lifecycle = SignalLifecycle()
+    candle_protection = CandleCloseProtection()
+    system = FullSystem()
+    pipeline = IntegrationPipeline(system)
+    journal = SignalJournal()
+    rate_guard = DerivRateLimitGuard()
+
+    print("Core analysis          : READY")
+    print("Protection             : READY")
+    print("Integration pipeline  : READY")
+    print("Journal                : READY")
+    print("Rate-limit guard       : READY")
+except Exception as exc:
+    print(f"Component initialization: FAILED — {exc}")
+    raise SystemExit(1)
+
+# ------------------------------------------------------------
+# ALERT COMPONENTS
+# ------------------------------------------------------------
+try:
+    config = AlertConfig()
+    manager = AlertManager(config)
+    feedback = AlertFeedback()
+    alert_router = SignalAlertRouter(config, manager, feedback)
+
+    print("Alert system           : READY")
+except Exception as exc:
+    print(f"Alert system           : FAILED — {exc}")
+    errors.append(f"alerts: {exc}")
+    alert_router = None
+
+# ------------------------------------------------------------
+# LOCAL SAFETY TESTS
+# ------------------------------------------------------------
+try:
+    rate_guard.detect({
+        "error": {
+            "code": "RateLimit",
+            "message": "simulated stress-test rate limit"
+        }
+    })
+
+    assert not rate_guard.can_retry()
+
+    rate_guard.reset()
+
+    print("Rate-limit safety      : PASSED")
+except Exception as exc:
+    print(f"Rate-limit safety      : FAILED — {exc}")
+    errors.append(f"rate-limit: {exc}")
+
+try:
+    stale = protection.protect_from_stale_data(time.time() - 120)
+    assert stale
+
+    print("Stale-data safety      : PASSED")
+except Exception as exc:
+    print(f"Stale-data safety      : FAILED — {exc}")
+    errors.append(f"stale-data: {exc}")
+
+# ------------------------------------------------------------
+# LIVE DERIV XAUUSD
+# ------------------------------------------------------------
+ws = None
+
+
+def handle_message(message):
+    global ticks, latest_price, latest_epoch
+    global rate_limited, processing_errors
+
+    try:
+        data = json.loads(message) if isinstance(message, str) else message
+
+        if not isinstance(data, dict):
+            return
+
+        if "error" in data:
+            err = data["error"]
+            text = str(err)
+
+            if "RateLimit" in text or "rate limit" in text.lower():
+                rate_limited = True
+            return
+
+        if data.get("msg_type") == "tick" and "tick" in data:
+            tick = data["tick"]
+
+            if tick.get("symbol") != SYMBOL:
+                return
+
+            quote = tick.get("quote")
+            epoch = tick.get("epoch")
+
+            if quote is None:
+                return
+
+            price = float(quote)
+            epoch_value = float(epoch) if epoch is not None else time.time()
+
+            latest_price = price
+            latest_epoch = epoch_value
+            ticks += 1
+
+            # Feed live market data.
+            try:
+                market_data.update_from_deriv(data)
+            except Exception:
+                pass
+
+            # Feed candle engine.
+            try:
+                candle_engine.update_tick(
+                    SYMBOL,
+                    price,
+                    epoch_value,
+                )
+            except Exception as exc:
+                processing_errors += 1
+                print(f"Candle update error: {exc}")
+
+    except Exception:
+        processing_errors += 1
+
+
+try:
+    print()
+    print("LIVE XAUUSD STRESS RUN")
+    print("-" * 70)
+
+    ws = DerivWebSocket()
+    ws.on_message_callback = handle_message
+
+    ws.connect()
+
+    # Give the WebSocket thread time to establish the connection.
+    connected = False
+    for _ in range(10):
+        if getattr(ws, "connected", False):
+            connected = True
+            break
+        time.sleep(0.5)
+
+    if not connected:
+        raise RuntimeError("WebSocket connection did not become ready")
+
+    print("Deriv connection       : PASSED")
+
+    time.sleep(5)
+
+    ws.subscribe_ticks(SYMBOL)
+    print("XAUUSD subscription    : SENT")
+    print(f"Monitoring             : {LIVE_SECONDS} seconds")
+    print()
+
+    start = time.time()
+
+    while time.time() - start < LIVE_SECONDS:
+        time.sleep(1)
+
+        elapsed = int(time.time() - start)
+
+        if elapsed > 0 and elapsed % 20 == 0:
+            print(
+                f"[{elapsed:02d}s] "
+                f"ticks={ticks} "
+                f"price={latest_price} "
+                f"rate_limited={rate_limited}"
+            )
+
+finally:
+    if ws is not None:
+        try:
+            ws.stop()
+        except Exception:
+            pass
+
+# ------------------------------------------------------------
+# LIVE DATA VALIDATION
+# ------------------------------------------------------------
+print()
+print("-" * 70)
+
+print(f"Live ticks             : {ticks}")
+print(f"Latest XAUUSD          : {latest_price}")
+print(f"Latest epoch           : {latest_epoch}")
+print(f"Processing errors      : {processing_errors}")
+print(f"Rate limited           : {rate_limited}")
+
+if ticks == 0:
+    errors.append("no live XAUUSD ticks")
+if processing_errors != 0:
+    errors.append("live processing errors detected")
+
+if latest_epoch is not None:
+    age = time.time() - latest_epoch
+    print(f"Final data age         : {age:.1f}s")
+    print(f"Stale                  : {'YES' if age > 30 else 'NO'}")
+
+    if age > 30:
+        errors.append("XAUUSD data became stale")
+
+# ------------------------------------------------------------
+# LIVE CANDLE VALIDATION
+# ------------------------------------------------------------
+try:
+    current = candle_engine.get_current(SYMBOL, TIMEFRAME)
+
+    print(
+        "Current M1 candle      : "
+        f"{'YES' if current is not None else 'NO'}"
+    )
+
+    if current is None:
+        errors.append("live M1 candle unavailable")
+except Exception as exc:
+    print(f"Current candle         : FAILED — {exc}")
+    errors.append(f"candle: {exc}")
+
+# ------------------------------------------------------------
+# HISTORICAL SIGNAL ENGINE VALIDATION
+# ------------------------------------------------------------
+try:
+    history_path = Path("data/historical_bootstrap/frxXAUUSD_M1.json")
+
+    if history_path.exists():
+        raw = json.loads(history_path.read_text())
+        items = raw[-250:] if isinstance(raw, list) else []
+
+        candles = []
+
+        for item in items:
+            start_value = float(item["start"])
+
+            candles.append(
+                type(current)(
+                    symbol=SYMBOL,
+                    timeframe=TIMEFRAME,
+                    start=start_value,
+                    end=start_value + 60,
+                    open=float(item["open"]),
+                    high=float(item["high"]),
+                    low=float(item["low"]),
+                    close=float(item["close"]),
+                    volume=float(item.get("volume", 0)),
+                )
+            )
+
+        signal = signal_engine.generate(
+            SYMBOL,
+            TIMEFRAME,
+            candles,
+        )
+
+        print(f"Historical candles     : {len(candles)}")
+        print(f"Signal engine           : {signal.direction}")
+        print(f"Signal strength         : {signal.strength}/10")
+        print(f"Signal valid            : {signal.valid}")
+
+        # WAIT is valid. BUY/SELL must satisfy validity.
+        if signal.direction in ("BUY", "SELL") and not signal.valid:
+            errors.append("invalid directional signal generated")
+
+        # Alert safety.
+        if alert_router is not None:
+            routed = alert_router.route(signal)
+
+            print(
+                "Alert routing           : "
+                f"{routed.status}"
+            )
+
+            if signal.direction == "WAIT" and routed.status == "ROUTED":
+                errors.append("WAIT signal was routed as an alert")
+
+    else:
+        print("Historical candles     : FILE NOT FOUND")
+        errors.append("XAUUSD historical file missing")
+
+except Exception as exc:
+    print(f"Signal engine           : FAILED — {exc}")
+    errors.append(f"signal engine: {exc}")
+
+# ------------------------------------------------------------
+# EMERGENCY STOP / RECOVERY
+# ------------------------------------------------------------
+try:
+    system.emergency_stop_system()
+
+    snap = system.snapshot()
+
+    # Confirm the actual FullSystem emergency-stop state
+    # through its public snapshot API.
+    stopped = bool(
+        getattr(snap, "emergency_stop", False)
+    )
+
+    assert stopped, f"Emergency STOP state was not confirmed: {snap}"
+
+    print("Emergency STOP         : PASSED")
+
+    system.reset_emergency_stop()
+
+    snap = system.snapshot()
+
+    recovered = not bool(
+        getattr(snap, "emergency_stop", False)
+    )
+
+    assert recovered, f"Emergency recovery state was not confirmed: {snap}"
+
+    print("Emergency recovery     : PASSED")
+except Exception as exc:
+    print(f"Emergency STOP         : FAILED — {exc}")
+    errors.append(f"emergency stop: {exc}")
+
+# ------------------------------------------------------------
+# JOURNAL PERSISTENCE
+# ------------------------------------------------------------
+try:
+    before = journal.count()
+    journal2 = SignalJournal()
+    after = journal2.count()
+
+    print(f"Journal records        : {before}")
+    print(
+        "Journal persistence    : "
+        f"{'PASSED' if before == after else 'FAILED'}"
+    )
+
+    if before != after:
+        errors.append("journal persistence mismatch")
+except Exception as exc:
+    print(f"Journal persistence    : FAILED — {exc}")
+    errors.append(f"journal: {exc}")
+
+# ------------------------------------------------------------
+# FINAL RESULT
+# ------------------------------------------------------------
+print()
+print("=" * 70)
+
+if not errors:
+    print("STAGE 16Z: PASSED")
+else:
+    print("STAGE 16Z: FAILED")
+    print("Errors:")
+    for error in errors:
+        print(f"- {error}")
+
+print("=" * 70)
+print("Signal-only mode       : ENABLED")
+print("Trade execution        : DISABLED")
+print("Primary market         : XAUUSD")
+print("=" * 70)

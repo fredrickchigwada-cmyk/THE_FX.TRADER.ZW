@@ -1,0 +1,17 @@
+[
+  {
+    "symbol": "XAUUSD",
+    "timeframe": "M1",
+    "signal": "WAIT",
+    "strength": 0.0,
+    "confirmations": 0,
+    "entry": null,
+    "stop_loss": null,
+    "tp1": null,
+    "tp2": null,
+    "result": "PENDING",
+    "timestamp": "2026-09-21T20:00:19.590243+00:00",
+    "setup": "LIVE_XAUUSD_16T",
+    "notes": "INSUFFICIENT_DATA: 1/200 candles"
+  }
+]
