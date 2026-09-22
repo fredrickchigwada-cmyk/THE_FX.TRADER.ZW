@@ -53,17 +53,17 @@ jobs:
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
             "platform-tools" \
             "platforms;android-35" \
-            "build-tools;35.0.0"
+            "build-tools;36.0.0"
 
       - name: Verify Android packages
         run: |
           set -e
 
           test -d "$ANDROID_HOME/platforms/android-35"
-          test -d "$ANDROID_HOME/build-tools/35.0.0"
+          test -d "$ANDROID_HOME/build-tools/36.0.0"
 
           echo "[OK] Android 35 platform"
-          echo "[OK] Build Tools 35.0.0"
+          echo "[OK] Build Tools 36.0.0"
 
       - name: Verify Android source
         run: |
