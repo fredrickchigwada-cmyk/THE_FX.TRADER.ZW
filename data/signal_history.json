@@ -1048,5 +1048,50 @@
     "timestamp": "2026-09-21T22:24:44.043807+00:00",
     "setup": "",
     "notes": "18F controlled technical signal | NEWS: NEWS_NEUTRAL_TECHNICAL_SIGNAL_RETAINED"
+  },
+  {
+    "symbol": "XAUUSD",
+    "timeframe": "M1",
+    "signal": "SELL",
+    "strength": 9.0,
+    "confirmations": 5,
+    "entry": 4318.44,
+    "stop_loss": 4323.051428571428,
+    "tp1": 4313.828571428571,
+    "tp2": 4309.217142857143,
+    "result": "PENDING",
+    "timestamp": "2026-09-22T09:05:01.366892+00:00",
+    "setup": "",
+    "notes": "RSI bearish; market structure bearish; negative momentum; bearish candle confirmation | NEWS: NEWS_NEUTRAL_TECHNICAL_SIGNAL_RETAINED"
+  },
+  {
+    "symbol": "XAUUSD",
+    "timeframe": "M1",
+    "signal": "BUY",
+    "strength": 9.0,
+    "confirmations": 5,
+    "entry": 4322.14,
+    "stop_loss": 4317.3378571428575,
+    "tp1": 4326.942142857143,
+    "tp2": 4331.744285714286,
+    "result": "PENDING",
+    "timestamp": "2026-09-22T09:16:01.037317+00:00",
+    "setup": "",
+    "notes": "EMA trend bullish; RSI bullish; market structure not bullish; positive momentum; bullish candle confirmation | NEWS: NEWS_NEUTRAL_TECHNICAL_SIGNAL_RETAINED"
+  },
+  {
+    "symbol": "XAUUSD",
+    "timeframe": "M1",
+    "signal": "BUY",
+    "strength": 9.0,
+    "confirmations": 5,
+    "entry": 4317.22,
+    "stop_loss": 4314.154642857143,
+    "tp1": 4320.285357142858,
+    "tp2": 4323.350714285714,
+    "result": "PENDING",
+    "timestamp": "2026-09-22T09:42:01.371134+00:00",
+    "setup": "",
+    "notes": "EMA trend bullish; RSI bullish; market structure not bullish; positive momentum; bullish candle confirmation | NEWS: NEWS_NEUTRAL_TECHNICAL_SIGNAL_RETAINED"
   }
 ]

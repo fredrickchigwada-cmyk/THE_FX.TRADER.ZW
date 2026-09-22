@@ -1,0 +1,623 @@
+"""
+THE_FX.TRADER.BOT.ZW
+Stage 17 — Production Runtime
+
+Signal-only production runtime.
+NO trade execution.
+"""
+
+import time
+import threading
+from dataclasses import dataclass
+from typing import Dict, Optional
+
+from core.deriv_ws import DerivWebSocket
+from core.market_data import MarketDataStore
+from core.candle_engine import CandleEngine
+from core.signal_engine import SignalEngine
+from core.signal_protection import SignalProtection
+from core.signal_lifecycle import SignalLifecycle
+from core.candle_close_protection import CandleCloseProtection
+from core.full_system import FullSystem
+from core.integration_pipeline import IntegrationPipeline
+from core.persistent_alert_router import PersistentAlertRouter
+from core.signal_journal import SignalJournal
+from core.live_news_feed import LiveNewsFeed
+from core.multi_market_runtime import MultiMarketRuntime
+
+
+@dataclass
+class RuntimeStatus:
+    running: bool = False
+    connected: bool = False
+    healthy: bool = False
+    stale: bool = False
+    rate_limited: bool = False
+    ticks: int = 0
+    last_price: Optional[float] = None
+    last_epoch: Optional[float] = None
+    last_error: str = ""
+    news_available: bool = False
+    news_risk: str = "LOW"
+    news_bias: str = "NEUTRAL"
+    news_items: int = 0
+    news_last_refresh: float = 0.0
+
+
+class ProductionRuntime:
+    """
+    Continuous signal-analysis runtime.
+
+    Data flow:
+
+        Deriv
+          ↓
+        MarketDataStore
+          ↓
+        CandleEngine
+          ↓
+        SignalEngine
+          ↓
+        Protection
+          ↓
+        IntegrationPipeline
+          ↓
+        Alerts + Journal
+
+    No order/trade functionality exists here.
+    """
+
+    PRIMARY_MARKET = "XAUUSD"
+    PRIMARY_SYMBOL = "frxXAUUSD"
+    PRIMARY_TIMEFRAME = "M1"
+
+    STALE_SECONDS = 30
+    HEALTH_INTERVAL = 5.0
+
+    def __init__(self):
+        self.status = RuntimeStatus()
+
+        self.ws = DerivWebSocket()
+        self.market_data = MarketDataStore()
+        self.candles = CandleEngine()
+        self.signal_engine = SignalEngine()
+        self.protection = SignalProtection()
+        self.lifecycle = SignalLifecycle()
+        self.candle_protection = CandleCloseProtection()
+
+        self.system = FullSystem()
+        self.pipeline = IntegrationPipeline(self.system)
+
+        self.alert_router = PersistentAlertRouter()
+        self.journal = SignalJournal()
+
+        # Stage 18H: live official-news confirmation layer.
+        # News never creates BUY/SELL by itself.
+        self.news_feed = LiveNewsFeed(timeout=10)
+        # Stage 18I-B: full multi-market runtime.
+        # XAUUSD remains the primary signal market.
+        self.multi_market = MultiMarketRuntime()
+        self._subscribed_markets = set()
+        self.NEWS_REFRESH_SECONDS = 300.0
+        self._last_news_refresh = 0.0
+
+        self._stop_event = threading.Event()
+        self._lock = threading.Lock()
+
+        self._last_processed_epoch = None
+        self._last_signal_key = None
+
+        # Latest real SignalEngine result exposed to Android.
+        self._latest_signal = None
+
+        self.ws.on_message_callback = self._on_message
+
+    # ---------------------------------------------------------
+    # WebSocket message handling
+    # ---------------------------------------------------------
+
+    def _on_message(self, data):
+        try:
+            if not isinstance(data, dict):
+                return
+
+            if data.get("error"):
+                self.status.last_error = str(data["error"])
+                return
+
+            msg_type = data.get("msg_type")
+
+            # Stage 18I-B: consume Deriv's active-symbol response.
+            if msg_type == "active_symbols" or data.get("active_symbols") is not None:
+                try:
+                    print(
+                        "[18I-C DEBUG] active_symbols received:",
+                        len(data.get("active_symbols", []))
+                        if isinstance(data.get("active_symbols"), list)
+                        else "INVALID",
+                    )
+                    if isinstance(data.get("active_symbols"), list) and data.get("active_symbols"):
+                        print(
+                            "[18I-C DEBUG] first symbol:",
+                            data["active_symbols"][0],
+                        )
+                    print("[18I-C DEBUG] calling multi_market.refresh()")
+
+                    refreshed = self.multi_market.refresh(data)
+
+                    print(
+                        "[18I-C DEBUG] refresh returned:",
+                        len(refreshed),
+                    )
+
+                    print(
+                        "[18I-C DEBUG] available after refresh:",
+                        self.multi_market.available_markets(),
+                    )
+
+                    print(
+                        "[18I-C DEBUG] XAUUSD symbol after refresh:",
+                        self.multi_market.symbol("XAUUSD"),
+                    )
+
+                    # Subscribe only to currently discovered/available symbols.
+                    for market in self.multi_market.available_markets():
+                        symbol = self.multi_market.symbol(market)
+                        if not symbol or symbol in self._subscribed_markets:
+                            continue
+
+                        try:
+                            if not self.ws.is_rate_limited():
+                                self.ws.subscribe_ticks(symbol)
+                                self._subscribed_markets.add(symbol)
+                        except Exception as exc:
+                            self.status.last_error = str(exc)
+
+                    # Make sure XAUUSD remains explicitly monitored.
+                    primary_symbol = self.multi_market.symbol(self.PRIMARY_MARKET)
+                    if primary_symbol == self.PRIMARY_SYMBOL:
+                        self._subscribed_markets.add(primary_symbol)
+
+                except Exception as exc:
+                    print(
+                        "[18I-C DEBUG] ACTIVE SYMBOL HANDLER ERROR:",
+                        repr(exc),
+                    )
+                    import traceback
+                    traceback.print_exc()
+                    self.status.last_error = str(exc)
+
+                return
+
+            if msg_type == "tick" or data.get("tick"):
+                tick = data.get("tick", data)
+
+                symbol = tick.get("symbol")
+                quote = tick.get("quote")
+                epoch = tick.get("epoch")
+
+                if symbol is None or quote is None:
+                    return
+
+                price = float(quote)
+                epoch = float(epoch) if epoch is not None else time.time()
+
+                self.market_data.update_from_deriv(
+                    {
+                        "symbol": symbol,
+                        "quote": price,
+                        "epoch": epoch,
+                    }
+                )
+
+                self.candles.update_tick(
+                    symbol,
+                    price,
+                    epoch,
+                )
+
+                # Stage 18I-B: map the Deriv symbol back to the requested
+                # market and update its freshness/price state.
+                try:
+                    for market in self.multi_market.requested_markets:
+                        if self.multi_market.symbol(market) == symbol:
+                            self.multi_market.update_tick(
+                                market,
+                                price,
+                                epoch,
+                            )
+                            break
+                except Exception as exc:
+                    self.status.last_error = str(exc)
+
+                with self._lock:
+                    self.status.ticks += 1
+                    self.status.last_price = price
+                    self.status.last_epoch = epoch
+
+                    # A live tick proves the primary data path is active.
+                    # Do not leave an old startup rate-protection message
+                    # visible after live market data has arrived.
+                    if "rate protection" in self.status.last_error.lower():
+                        self.status.last_error = ""
+
+        except Exception as exc:
+            self.status.last_error = str(exc)
+
+    # ---------------------------------------------------------
+    # Connection
+    # ---------------------------------------------------------
+
+    def connect(self):
+        try:
+            self.ws.connect()
+
+            deadline = time.time() + 10
+
+            while time.time() < deadline:
+                if getattr(self.ws, "connected", False):
+                    self.status.connected = True
+
+                    # XAUUSD is the primary market.
+                    # Subscribe directly to the verified Deriv symbol
+                    # immediately after connection. This must not depend
+                    # on active-symbol discovery.
+                    try:
+                        if not self.ws.is_rate_limited():
+                            if self.ws.subscribe_ticks(self.PRIMARY_SYMBOL):
+                                self._subscribed_markets.add(
+                                    self.PRIMARY_SYMBOL
+                                )
+                                self.status.rate_limited = False
+                    except Exception as exc:
+                        self.status.last_error = str(exc)
+
+                    # Market discovery is secondary. If rate protection
+                    # permits it, request the available-symbol list.
+                    try:
+                        if not self.ws.is_rate_limited():
+                            self.ws.request_active_symbols()
+                    except Exception as exc:
+                        self.status.last_error = str(exc)
+
+                    self.status.healthy = True
+                    return True
+
+                time.sleep(0.2)
+
+            self.status.last_error = "WebSocket connection timeout"
+            return False
+
+        except Exception as exc:
+            self.status.last_error = str(exc)
+            return False
+
+    # ---------------------------------------------------------
+    # XAUUSD subscription
+    # ---------------------------------------------------------
+
+    def subscribe_primary(self):
+        try:
+            if not self.status.connected:
+                return False
+
+            # XAUUSD is the primary market.
+            # Subscribe directly to the verified Deriv symbol.
+            if self.ws.is_rate_limited():
+                self.status.rate_limited = True
+                self.status.last_error = (
+                    "Deriv request currently rate-limited"
+                )
+                return False
+
+            result = self.ws.subscribe_ticks(self.PRIMARY_SYMBOL)
+
+            if result:
+                self.status.rate_limited = False
+                return True
+
+            return False
+
+        except Exception as exc:
+            self.status.last_error = str(exc)
+
+            try:
+                self.status.rate_limited = self.ws.is_rate_limited()
+            except Exception:
+                pass
+
+            return False
+
+    # ---------------------------------------------------------
+    # Health check
+    # ---------------------------------------------------------
+
+    def health_check(self):
+        try:
+            self.status.connected = bool(
+                getattr(self.ws, "connected", False)
+            )
+
+            self.status.rate_limited = bool(
+                self.ws.is_rate_limited()
+            )
+
+            self.status.stale = bool(
+                self.ws.is_stale(self.STALE_SECONDS)
+            )
+
+            self.status.healthy = (
+                self.status.connected
+                and not self.status.stale
+                and not self.status.rate_limited
+            )
+
+        except Exception as exc:
+            self.status.healthy = False
+            self.status.last_error = str(exc)
+
+        return self.status.healthy
+
+    # ---------------------------------------------------------
+    # Live news intelligence
+    # ---------------------------------------------------------
+
+    def refresh_news(self, force=False):
+        try:
+            now = time.time()
+
+            if (
+                not force
+                and self._last_news_refresh
+                and now - self._last_news_refresh
+                < self.NEWS_REFRESH_SECONDS
+            ):
+                return self.news_feed.snapshot()
+
+            self.news_feed.refresh()
+
+            risk = self.news_feed.xauusd_risk()
+
+            with self._lock:
+                self.status.news_available = bool(
+                    risk.get("news_available", False)
+                )
+                self.status.news_risk = str(
+                    risk.get("risk", "LOW")
+                )
+                self.status.news_bias = str(
+                    risk.get("bias", "NEUTRAL")
+                )
+                self.status.news_items = int(
+                    risk.get("fresh_items", 0)
+                )
+                self.status.news_last_refresh = now
+
+            self._last_news_refresh = now
+
+            return self.news_feed.snapshot()
+
+        except Exception as exc:
+            self.status.last_error = str(exc)
+            return None
+
+    # ---------------------------------------------------------
+    # Signal analysis
+    # ---------------------------------------------------------
+
+    def analyze_primary(self):
+        try:
+            candles = self.candles.get_history(
+                self.PRIMARY_SYMBOL,
+                self.PRIMARY_TIMEFRAME,
+            )
+
+            if not candles:
+                return None
+
+            signal = self.signal_engine.generate(
+                self.PRIMARY_SYMBOL,
+                self.PRIMARY_TIMEFRAME,
+                candles,
+            )
+
+            # Keep the exact SignalEngine result for the Android
+            # dashboard. No second signal calculation is performed.
+            with self._lock:
+                self._latest_signal = signal
+
+            return signal
+
+        except Exception as exc:
+            self.status.last_error = str(exc)
+            return None
+
+    # ---------------------------------------------------------
+    # Signal processing
+    # ---------------------------------------------------------
+
+    def process_signal(self, signal):
+        if signal is None:
+            return None
+
+        try:
+            # WAIT and invalid signals must never create alerts.
+            if (
+                getattr(signal, "direction", "WAIT") == "WAIT"
+                or not getattr(signal, "valid", False)
+            ):
+                return self.pipeline.process_signal(signal)
+
+            # Candle-close protection.
+            candle = self.candles.get_current(
+                self.PRIMARY_SYMBOL,
+                self.PRIMARY_TIMEFRAME,
+            )
+
+            if candle is None:
+                return self.pipeline.process_signal(signal)
+
+            close_result = self.candle_protection.confirm(
+                signal,
+                candle,
+            )
+
+            # CandleCloseProtection.confirm() returns:
+            # (allowed: bool, reason: str)
+            # Check the boolean result explicitly. A non-empty tuple
+            # is truthy in Python even when its first value is False.
+            if isinstance(close_result, tuple):
+                candle_allowed = bool(close_result[0])
+            else:
+                candle_allowed = bool(close_result)
+
+            if not candle_allowed:
+                return self.pipeline.process_signal(signal)
+
+            # Signal protection.
+            protected = self.protection.emit(signal)
+
+            if protected is None:
+                return self.pipeline.process_signal(signal)
+
+            # Lifecycle receives ProtectedSignal, never raw Signal.
+            self.lifecycle.signal_created(protected)
+
+            # Pipeline handles journal + alert routing.
+            # Stage 18H: news can confirm or block an existing
+            # technical signal, but can never create one.
+            risk = self.status.news_risk
+            bias = self.status.news_bias
+
+            return self.pipeline.process_signal(
+                signal,
+                news_risk=risk,
+                news_bias=bias,
+            )
+
+        except Exception as exc:
+            self.status.last_error = str(exc)
+            return None
+
+    # ---------------------------------------------------------
+    # Main runtime loop
+    # ---------------------------------------------------------
+
+    def run(self, duration=None):
+        self.status.running = True
+        self._stop_event.clear()
+
+        if not self.connect():
+            self.status.running = False
+            return False
+
+        # XAUUSD is already subscribed by connect().
+        # Do not subscribe a second time here because the Deriv
+        # request guard intentionally blocks rapid duplicate requests.
+
+        started = time.time()
+        next_health = started
+
+        while not self._stop_event.is_set():
+
+            now = time.time()
+
+            # Optional finite runtime for testing.
+            if duration is not None:
+                if now - started >= duration:
+                    break
+
+            # Health monitoring.
+            if now >= next_health:
+                self.health_check()
+                next_health = now + self.HEALTH_INTERVAL
+
+            # Analyze only when data is healthy.
+            if self.status.connected and not self.status.stale:
+                signal = self.analyze_primary()
+
+                if signal is not None:
+                    signal_key = (
+                        getattr(signal, "symbol", ""),
+                        getattr(signal, "timeframe", ""),
+                        getattr(signal, "direction", "WAIT"),
+                        getattr(signal, "timestamp", None),
+                    )
+
+                    # Prevent processing the exact same signal repeatedly.
+                    if signal_key != self._last_signal_key:
+                        self._last_signal_key = signal_key
+                        self.process_signal(signal)
+
+            time.sleep(1.0)
+
+        self.stop()
+        return True
+
+    # ---------------------------------------------------------
+    # Stop
+    # ---------------------------------------------------------
+
+    def stop(self):
+        self._stop_event.set()
+
+        try:
+            self.ws.stop()
+        except Exception:
+            pass
+
+        self.status.running = False
+        self.status.connected = False
+
+    # ---------------------------------------------------------
+    # Status
+    # ---------------------------------------------------------
+
+    def snapshot(self):
+        with self._lock:
+            return {
+                "running": self.status.running,
+                "connected": self.status.connected,
+                "healthy": self.status.healthy,
+                "stale": self.status.stale,
+                "rate_limited": self.status.rate_limited,
+                "ticks": self.status.ticks,
+                "last_price": self.status.last_price,
+                "last_epoch": self.status.last_epoch,
+                "last_error": self.status.last_error,
+                "primary_market": self.PRIMARY_MARKET,
+                "primary_symbol": self.PRIMARY_SYMBOL,
+                "timeframe": self.PRIMARY_TIMEFRAME,
+                "signal": (
+                    {
+                        "symbol": self._latest_signal.symbol,
+                        "timeframe": self._latest_signal.timeframe,
+                        "direction": self._latest_signal.direction,
+                        "strength": self._latest_signal.strength,
+                        "confirmations": self._latest_signal.confirmations,
+                        "entry": self._latest_signal.entry,
+                        "stop_loss": self._latest_signal.stop_loss,
+                        "tp1": self._latest_signal.tp1,
+                        "tp2": self._latest_signal.tp2,
+                        "invalidation": self._latest_signal.invalidation,
+                        "explanation": self._latest_signal.explanation,
+                        "candle_confirmed": self._latest_signal.candle_confirmed,
+                        "valid": self._latest_signal.valid,
+                    }
+                    if self._latest_signal is not None
+                    else None
+                ),
+                "signal_only": True,
+                "trade_execution": False,
+                "news_available": bool(
+                    getattr(self, "news_feed", None)
+                    and self.news_feed.fresh_xauusd_news()
+                ),
+                "news_risk": self.status.news_risk,
+                "news_bias": self.status.news_bias,
+                "news_items": self.status.news_items,
+                "multi_market": self.multi_market.snapshot(),
+                "available_markets": self.multi_market.available_markets(),
+                "unavailable_markets": self.multi_market.unavailable_markets(),
+                "closed_markets": self.multi_market.closed_markets(),
+            }
