@@ -65,9 +65,38 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        buildUI();
+        try {
+            buildUI();
 
-        handler.post(refreshTask);
+            if (systemStatus != null) {
+                systemStatus.setText(
+                        "System: READY\n" +
+                        "Signal generation: CHECKING\n" +
+                        "Automatic trading: DISABLED"
+                );
+            }
+
+            // Start backend polling only after the UI is fully created.
+            handler.postDelayed(refreshTask, 500);
+
+        } catch (Exception e) {
+            // Keep the Activity alive and expose startup failure on screen.
+            try {
+                TextView error = new TextView(this);
+                error.setText(
+                        "THE_FX.TRADER.BOT.ZW\n\n" +
+                        "Startup error:\n" +
+                        e.toString()
+                );
+                error.setTextColor(Color.WHITE);
+                error.setTextSize(16);
+                error.setPadding(30, 30, 30, 30);
+                error.setBackgroundColor(Color.BLACK);
+                setContentView(error);
+            } catch (Exception ignored) {
+                // Nothing else can safely be done during startup.
+            }
+        }
     }
 
     private TextView text(
