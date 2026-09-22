@@ -80,8 +80,26 @@ jobs:
       - name: Build Debug APK
         working-directory: android_app
         run: |
-          set -e
+          set +e
           gradle assembleDebug --stacktrace
+          RESULT=$?
+
+          echo
+          echo "=============================================="
+          echo "ANDROID BUILD RESULT"
+          echo "=============================================="
+
+          if [ "$RESULT" -eq 0 ]; then
+            echo "[OK] Gradle build succeeded"
+          else
+            echo "[ERROR] Gradle build failed"
+            echo "[ERROR] Exit code: $RESULT"
+            echo
+            echo "===== IMPORTANT GRADLE ERROR LINES ====="
+            gradle assembleDebug --stacktrace 2>&1 | grep -E "FAILURE:|What went wrong:|Execution failed|Could not|error:|Error:|Caused by:" | tail -80 || true
+          fi
+
+          exit "$RESULT"
 
       - name: Verify APK
         run: |
