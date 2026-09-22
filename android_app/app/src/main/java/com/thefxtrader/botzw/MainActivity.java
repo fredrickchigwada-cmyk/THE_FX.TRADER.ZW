@@ -316,7 +316,7 @@ public class MainActivity extends Activity {
                     @Override
                     public void run() {
 
-                        HttpURLConnection httpConnection =
+                        HttpURLConnection apiConnection =
                                 null;
 
                         try {
@@ -324,24 +324,24 @@ public class MainActivity extends Activity {
                             URL url =
                                     new URL(API);
 
-                            httpConnection =
+                            apiConnection =
                                     (HttpURLConnection)
                                             url.openConnection();
 
-                            httpConnection.setRequestMethod(
+                            apiConnection.setRequestMethod(
                                     "GET"
                             );
 
-                            httpConnection.setConnectTimeout(
+                            apiConnection.setConnectTimeout(
                                     1500
                             );
 
-                            httpConnection.setReadTimeout(
+                            apiConnection.setReadTimeout(
                                     1500
                             );
 
                             int code =
-                                    httpConnection.getResponseCode();
+                                    apiConnection.getResponseCode();
 
                             if (code != 200) {
                                 throw new Exception(
@@ -350,7 +350,7 @@ public class MainActivity extends Activity {
                             }
 
                             InputStream input =
-                                    httpConnection.getInputStream();
+                                    apiConnection.getInputStream();
 
                             BufferedReader reader =
                                     new BufferedReader(
@@ -415,8 +415,8 @@ public class MainActivity extends Activity {
 
                         } finally {
 
-                            if (connection != null) {
-                                httpConnection.disconnect();
+                            if (apiConnection != null) {
+                                apiConnection.disconnect();
                             }
                         }
                     }
