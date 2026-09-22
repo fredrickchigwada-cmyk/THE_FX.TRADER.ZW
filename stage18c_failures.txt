@@ -1,0 +1,199 @@
+test_add_remove_market (test_alert_config.AlertConfigTest.test_add_remove_market) ... ok
+test_add_remove_timeframe (test_alert_config.AlertConfigTest.test_add_remove_timeframe) ... ok
+test_cooldown_cannot_be_negative (test_alert_config.AlertConfigTest.test_cooldown_cannot_be_negative) ... ok
+test_default_configuration (test_alert_config.AlertConfigTest.test_default_configuration) ... ok
+test_direction_settings (test_alert_config.AlertConfigTest.test_direction_settings) ... ok
+test_markets (test_alert_config.AlertConfigTest.test_markets) ... ok
+test_master_switch_blocks_directions (test_alert_config.AlertConfigTest.test_master_switch_blocks_directions) ... ok
+test_no_trade_methods (test_alert_config.AlertConfigTest.test_no_trade_methods) ... ok
+test_serialization_round_trip (test_alert_config.AlertConfigTest.test_serialization_round_trip) ... ok
+test_sound_vibration (test_alert_config.AlertConfigTest.test_sound_vibration) ... ok
+test_strength_is_clamped (test_alert_config.AlertConfigTest.test_strength_is_clamped) ... ok
+test_timeframes (test_alert_config.AlertConfigTest.test_timeframes) ... ok
+test_buy_feedback (test_alert_feedback.AlertFeedbackTest.test_buy_feedback) ... ok
+test_clear (test_alert_feedback.AlertFeedbackTest.test_clear) ... ok
+test_default_settings (test_alert_feedback.AlertFeedbackTest.test_default_settings) ... ok
+test_disabled_feedback (test_alert_feedback.AlertFeedbackTest.test_disabled_feedback) ... ok
+test_history (test_alert_feedback.AlertFeedbackTest.test_history) ... ok
+test_invalid_pattern (test_alert_feedback.AlertFeedbackTest.test_invalid_pattern) ... ok
+test_long_pattern (test_alert_feedback.AlertFeedbackTest.test_long_pattern) ... ok
+test_medium_pattern (test_alert_feedback.AlertFeedbackTest.test_medium_pattern) ... ok
+test_no_trade_methods (test_alert_feedback.AlertFeedbackTest.test_no_trade_methods) ... ok
+test_sell_feedback (test_alert_feedback.AlertFeedbackTest.test_sell_feedback) ... ok
+test_settings (test_alert_feedback.AlertFeedbackTest.test_settings) ... ok
+test_short_pattern (test_alert_feedback.AlertFeedbackTest.test_short_pattern) ... ok
+test_sound_can_be_disabled (test_alert_feedback.AlertFeedbackTest.test_sound_can_be_disabled) ... ok
+test_test_alert (test_alert_feedback.AlertFeedbackTest.test_test_alert) ... ok
+test_vibration_can_be_disabled (test_alert_feedback.AlertFeedbackTest.test_vibration_can_be_disabled) ... ok
+test_android_available (test_alert_integration.AlertIntegrationTest.test_android_available) ... ok
+test_android_test_available (test_alert_integration.AlertIntegrationTest.test_android_test_available) ... ok
+test_buy_dispatches (test_alert_integration.AlertIntegrationTest.test_buy_dispatches) ... ok
+test_dispatcher_block_is_returned (test_alert_integration.AlertIntegrationTest.test_dispatcher_block_is_returned) ... ok
+test_histories_available (test_alert_integration.AlertIntegrationTest.test_histories_available) ... ok
+test_invalid_engine_response (test_alert_integration.AlertIntegrationTest.test_invalid_engine_response) ... ok
+test_no_trade_methods (test_alert_integration.AlertIntegrationTest.test_no_trade_methods) ... ok
+test_sell_dispatches (test_alert_integration.AlertIntegrationTest.test_sell_dispatches) ... ok
+test_settings_available (test_alert_integration.AlertIntegrationTest.test_settings_available) ... ok
+test_unprotected_signal_blocked (test_alert_integration.AlertIntegrationTest.test_unprotected_signal_blocked) ... ok
+test_wait_does_not_dispatch (test_alert_integration.AlertIntegrationTest.test_wait_does_not_dispatch) ... ok
+test_buy_alert_allowed (test_alert_manager.AlertManagerTest.test_buy_alert_allowed) ... ok
+test_buy_and_sell_have_separate_cooldowns (test_alert_manager.AlertManagerTest.test_buy_and_sell_have_separate_cooldowns) ... ok
+test_clear (test_alert_manager.AlertManagerTest.test_clear) ... ok
+test_cooldown_blocks_duplicate (test_alert_manager.AlertManagerTest.test_cooldown_blocks_duplicate) ... ok
+test_cooldown_expires (test_alert_manager.AlertManagerTest.test_cooldown_expires) ... ok
+test_direction_can_be_enabled (test_alert_manager.AlertManagerTest.test_direction_can_be_enabled) ... ok
+test_latest_event (test_alert_manager.AlertManagerTest.test_latest_event) ... ok
+test_minimum_strength_blocks (test_alert_manager.AlertManagerTest.test_minimum_strength_blocks) ... ok
+test_no_trade_methods (test_alert_manager.AlertManagerTest.test_no_trade_methods) ... ok
+test_sell_alert_allowed (test_alert_manager.AlertManagerTest.test_sell_alert_allowed) ... ok
+test_settings (test_alert_manager.AlertManagerTest.test_settings) ... ok
+test_test_alert (test_alert_manager.AlertManagerTest.test_test_alert) ... ok
+test_wait_disabled_by_default (test_alert_manager.AlertManagerTest.test_wait_disabled_by_default) ... ok
+test_atomic_save_replaces_previous (test_alert_persistence.AlertPersistenceTest.test_atomic_save_replaces_previous) ... ok
+test_custom_path (test_alert_persistence.AlertPersistenceTest.test_custom_path) ... ok
+test_delete (test_alert_persistence.AlertPersistenceTest.test_delete) ... ok
+test_delete_missing_file (test_alert_persistence.AlertPersistenceTest.test_delete_missing_file) ... ok
+test_file_is_valid_json (test_alert_persistence.AlertPersistenceTest.test_file_is_valid_json) ... ok
+test_invalid_json_returns_default (test_alert_persistence.AlertPersistenceTest.test_invalid_json_returns_default) ... ok
+test_missing_file_returns_default (test_alert_persistence.AlertPersistenceTest.test_missing_file_returns_default) ... ok
+test_no_trade_methods (test_alert_persistence.AlertPersistenceTest.test_no_trade_methods) ... ok
+test_non_dictionary_json_returns_default (test_alert_persistence.AlertPersistenceTest.test_non_dictionary_json_returns_default) ... ok
+test_save_and_load (test_alert_persistence.AlertPersistenceTest.test_save_and_load) ... ok
+test_save_creates_file (test_alert_persistence.AlertPersistenceTest.test_save_creates_file) ... ok
+test_available (test_android_alert_bridge.AndroidAlertBridgeTest.test_available) ... ok
+test_command_failure (test_android_alert_bridge.AndroidAlertBridgeTest.test_command_failure) ... ok
+test_no_trade_methods (test_android_alert_bridge.AndroidAlertBridgeTest.test_no_trade_methods) ... ok
+test_notification (test_android_alert_bridge.AndroidAlertBridgeTest.test_notification) ... ok
+test_send_alert (test_android_alert_bridge.AndroidAlertBridgeTest.test_send_alert) ... ok
+test_sound_command (test_android_alert_bridge.AndroidAlertBridgeTest.test_sound_command) ... ok
+test_sound_without_file_is_blocked (test_android_alert_bridge.AndroidAlertBridgeTest.test_sound_without_file_is_blocked) ... ok
+test_test_notification (test_android_alert_bridge.AndroidAlertBridgeTest.test_test_notification) ... ok
+test_test_vibration (test_android_alert_bridge.AndroidAlertBridgeTest.test_test_vibration) ... ok
+test_vibration (test_android_alert_bridge.AndroidAlertBridgeTest.test_vibration) ... ok
+test_closed_candle_confirms_signal (test_candle_close_protection.CandleCloseProtectionTest.test_closed_candle_confirms_signal) ... ok
+test_closed_candle_is_detected (test_candle_close_protection.CandleCloseProtectionTest.test_closed_candle_is_detected) ... ok
+test_forming_candle_blocks_signal (test_candle_close_protection.CandleCloseProtectionTest.test_forming_candle_blocks_signal) ... ok
+test_forming_candle_is_detected (test_candle_close_protection.CandleCloseProtectionTest.test_forming_candle_is_detected) ... ok
+test_invalid_signal_blocked (test_candle_close_protection.CandleCloseProtectionTest.test_invalid_signal_blocked) ... ok
+test_missing_candle_blocked (test_candle_close_protection.CandleCloseProtectionTest.test_missing_candle_blocked) ... ok
+test_no_trade_methods (test_candle_close_protection.CandleCloseProtectionTest.test_no_trade_methods) ... ok
+test_seconds_until_close (test_candle_close_protection.CandleCloseProtectionTest.test_seconds_until_close) ... ok
+test_signal_candle_confirmation_required (test_candle_close_protection.CandleCloseProtectionTest.test_signal_candle_confirmation_required) ... ok
+test_symbol_mismatch (test_candle_close_protection.CandleCloseProtectionTest.test_symbol_mismatch) ... ok
+test_timeframe_mismatch (test_candle_close_protection.CandleCloseProtectionTest.test_timeframe_mismatch) ... ok
+test_wait_blocked (test_candle_close_protection.CandleCloseProtectionTest.test_wait_blocked) ... ok
+test_all_timeframes_exist (test_candle_engine.CandleEngineTests.test_all_timeframes_exist) ... ok
+test_bearish_candle (test_candle_engine.CandleEngineTests.test_bearish_candle) ... ok
+test_bullish_candle (test_candle_engine.CandleEngineTests.test_bullish_candle) ... ok
+test_h1_timeframe (test_candle_engine.CandleEngineTests.test_h1_timeframe) ... ok
+test_invalid_timeframe (test_candle_engine.CandleEngineTests.test_invalid_timeframe) ... ok
+test_m1_timeframe (test_candle_engine.CandleEngineTests.test_m1_timeframe) ... ok
+test_m5_timeframe (test_candle_engine.CandleEngineTests.test_m5_timeframe) ... ok
+test_new_candle_is_created (test_candle_engine.CandleEngineTests.test_new_candle_is_created) ... ok
+test_ohlc_building (test_candle_engine.CandleEngineTests.test_ohlc_building) ... ok
+test_invalid_tick_is_rejected (test_deriv_connection.DerivConnectionTests.test_invalid_tick_is_rejected) ... ok
+test_market_data_store (test_deriv_connection.DerivConnectionTests.test_market_data_store) ... ok
+test_signal_only_module_has_no_trade_methods (test_deriv_connection.DerivConnectionTests.test_signal_only_module_has_no_trade_methods) ... ok
+test_websocket_configuration (test_deriv_connection.DerivConnectionTests.test_websocket_configuration) ... ok
+test_live_tick_reception (test_deriv_live.DerivLiveConnectionTests.test_live_tick_reception) ... skipped 'Deriv server rate limit is currently active.'
+test_real_deriv_connection (test_deriv_live.DerivLiveConnectionTests.test_real_deriv_connection) ... ok
+test_bot_name (test_foundation.FoundationTests.test_bot_name) ... ok
+test_markets (test_foundation.FoundationTests.test_markets) ... ok
+test_signal_only (test_foundation.FoundationTests.test_signal_only) ... ok
+test_timeframes (test_foundation.FoundationTests.test_timeframes) ... ok
+test_android_available (test_live_alert_dispatcher.LiveAlertDispatcherTest.test_android_available) ... ok
+test_android_notification_command (test_live_alert_dispatcher.LiveAlertDispatcherTest.test_android_notification_command) ... FAIL
+test_android_test (test_live_alert_dispatcher.LiveAlertDispatcherTest.test_android_test) ... ok
+test_android_vibration_command (test_live_alert_dispatcher.LiveAlertDispatcherTest.test_android_vibration_command) ... FAIL
+test_buy_dispatches (test_live_alert_dispatcher.LiveAlertDispatcherTest.test_buy_dispatches) ... FAIL
+test_disabled_market_blocked (test_live_alert_dispatcher.LiveAlertDispatcherTest.test_disabled_market_blocked) ... ok
+test_duplicate_blocked (test_live_alert_dispatcher.LiveAlertDispatcherTest.test_duplicate_blocked) ... FAIL
+test_history_available (test_live_alert_dispatcher.LiveAlertDispatcherTest.test_history_available) ... ERROR
+test_invalid_signal_blocked (test_live_alert_dispatcher.LiveAlertDispatcherTest.test_invalid_signal_blocked) ... ok
+test_low_strength_blocked (test_live_alert_dispatcher.LiveAlertDispatcherTest.test_low_strength_blocked) ... ok
+test_no_trade_methods (test_live_alert_dispatcher.LiveAlertDispatcherTest.test_no_trade_methods) ... ok
+test_sell_dispatches (test_live_alert_dispatcher.LiveAlertDispatcherTest.test_sell_dispatches) ... FAIL
+test_settings_available (test_live_alert_dispatcher.LiveAlertDispatcherTest.test_settings_available) ... ERROR
+test_closed_market (test_market_discovery.MarketDiscoveryTests.test_closed_market) ... ok
+test_missing_market_is_unavailable (test_market_discovery.MarketDiscoveryTests.test_missing_market_is_unavailable) ... ok
+test_normalization (test_market_discovery.MarketDiscoveryTests.test_normalization) ... ok
+test_process_active_symbols (test_market_discovery.MarketDiscoveryTests.test_process_active_symbols) ... ok
+test_requested_markets_exist (test_market_discovery.MarketDiscoveryTests.test_requested_markets_exist) ... ok
+test_suspended_market_is_closed (test_market_discovery.MarketDiscoveryTests.test_suspended_market_is_closed) ... ok
+test_cache_protection (test_market_service.MarketServiceTests.test_cache_protection) ... ok
+test_market_access (test_market_service.MarketServiceTests.test_market_access) ... ok
+test_not_connected_protection (test_market_service.MarketServiceTests.test_not_connected_protection) ... ok
+test_service_has_discovery_engine (test_market_service.MarketServiceTests.test_service_has_discovery_engine) ... ok
+test_history_starts_empty (test_mtf_bootstrap.MTFBootstrapTest.test_history_starts_empty) ... ok
+test_mtf_without_data_waits (test_mtf_bootstrap.MTFBootstrapTest.test_mtf_without_data_waits) ... ok
+test_no_data_is_stale (test_mtf_bootstrap.MTFBootstrapTest.test_no_data_is_stale) ... ok
+test_no_trade_methods (test_mtf_bootstrap.MTFBootstrapTest.test_no_trade_methods) ... ok
+test_timeframes_exist (test_mtf_bootstrap.MTFBootstrapTest.test_timeframes_exist) ... ok
+test_xauusd_symbol (test_mtf_bootstrap.MTFBootstrapTest.test_xauusd_symbol) ... ok
+test_stage_8g_live (test_mtf_bootstrap_live.MTFBootstrapLiveTest.test_stage_8g_live) ... Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/data/data/com.termux/files/usr/lib/python3.13/unittest/__main__.py", line 18, in <module>
+    main(module=None)
+    ~~~~^^^^^^^^^^^^^
+  File "/data/data/com.termux/files/usr/lib/python3.13/unittest/main.py", line 104, in __init__
+    self.runTests()
+    ~~~~~~~~~~~~~^^
+  File "/data/data/com.termux/files/usr/lib/python3.13/unittest/main.py", line 270, in runTests
+    self.result = testRunner.run(self.test)
+                  ~~~~~~~~~~~~~~^^^^^^^^^^^
+  File "/data/data/com.termux/files/usr/lib/python3.13/unittest/runner.py", line 240, in run
+    test(result)
+    ~~~~^^^^^^^^
+  File "/data/data/com.termux/files/usr/lib/python3.13/unittest/suite.py", line 84, in __call__
+    return self.run(*args, **kwds)
+           ~~~~~~~~^^^^^^^^^^^^^^^
+  File "/data/data/com.termux/files/usr/lib/python3.13/unittest/suite.py", line 122, in run
+    test(result)
+    ~~~~^^^^^^^^
+  File "/data/data/com.termux/files/usr/lib/python3.13/unittest/suite.py", line 84, in __call__
+    return self.run(*args, **kwds)
+           ~~~~~~~~^^^^^^^^^^^^^^^
+  File "/data/data/com.termux/files/usr/lib/python3.13/unittest/suite.py", line 122, in run
+    test(result)
+    ~~~~^^^^^^^^
+  File "/data/data/com.termux/files/usr/lib/python3.13/unittest/suite.py", line 84, in __call__
+    return self.run(*args, **kwds)
+           ~~~~~~~~^^^^^^^^^^^^^^^
+  File "/data/data/com.termux/files/usr/lib/python3.13/unittest/suite.py", line 122, in run
+    test(result)
+    ~~~~^^^^^^^^
+  File "/data/data/com.termux/files/usr/lib/python3.13/unittest/case.py", line 707, in __call__
+    return self.run(*args, **kwds)
+           ~~~~~~~~^^^^^^^^^^^^^^^
+  File "/data/data/com.termux/files/usr/lib/python3.13/unittest/case.py", line 651, in run
+    self._callTestMethod(testMethod)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "/data/data/com.termux/files/usr/lib/python3.13/unittest/case.py", line 606, in _callTestMethod
+    if method() is not None:
+       ~~~~~~^^
+  File "/data/data/com.termux/files/home/THE_FX_TRADER_BOT_ZW/tests/test_mtf_bootstrap_live.py", line 48, in test_stage_8g_live
+    time.sleep(0.5)
+    ~~~~~~~~~~^^^^^
+KeyboardInterrupt
+[DERIV] WebSocket connected
+[DERIV] WebSocket ERROR: DerivRateLimitError('You have reached the rate limit for ticks.')
+[DERIV] WebSocket connected
+[DERIV] Connection test passed
+
+==========================================
+ THE_FX.TRADER.BOT.ZW
+ STAGE 8G LIVE VERIFICATION
+ XAUUSD RESUMABLE MTF BOOTSTRAP
+==========================================
+
+[LIVE] Waiting for Deriv connection...
+[MTF] XAUUSD connection established
+[MTF] Live XAUUSD ticks subscribed
+[LIVE] Deriv connection: OK
+[LIVE] Waiting for XAUUSD tick...
+
+[MTF] Starting resumable history bootstrap
+[MTF] Loading M1 history (attempt 1/5)
+[MTF] M1: rate limited
+[MTF] Waiting 60.0s before retry...

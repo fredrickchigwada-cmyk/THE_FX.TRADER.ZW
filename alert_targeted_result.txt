@@ -1,0 +1,219 @@
+test_alerts_disabled (tests.test_signal_alert_router.SignalAlertRouterTest.test_alerts_disabled) ... ok
+test_buy_and_sell_can_alert_separately (tests.test_signal_alert_router.SignalAlertRouterTest.test_buy_and_sell_can_alert_separately) ... ok
+test_buy_direction_disabled (tests.test_signal_alert_router.SignalAlertRouterTest.test_buy_direction_disabled) ... FAIL
+test_duplicate_alert_blocked (tests.test_signal_alert_router.SignalAlertRouterTest.test_duplicate_alert_blocked) ... FAIL
+test_feedback_matches_direction (tests.test_signal_alert_router.SignalAlertRouterTest.test_feedback_matches_direction) ... ERROR
+test_history (tests.test_signal_alert_router.SignalAlertRouterTest.test_history) ... ERROR
+test_invalid_signal_blocked (tests.test_signal_alert_router.SignalAlertRouterTest.test_invalid_signal_blocked) ... ok
+test_market_disabled (tests.test_signal_alert_router.SignalAlertRouterTest.test_market_disabled) ... ok
+test_no_trade_methods (tests.test_signal_alert_router.SignalAlertRouterTest.test_no_trade_methods) ... ok
+test_sell_direction_disabled (tests.test_signal_alert_router.SignalAlertRouterTest.test_sell_direction_disabled) ... FAIL
+test_settings (tests.test_signal_alert_router.SignalAlertRouterTest.test_settings) ... ERROR
+test_strength_filter (tests.test_signal_alert_router.SignalAlertRouterTest.test_strength_filter) ... ok
+test_test_alert (tests.test_signal_alert_router.SignalAlertRouterTest.test_test_alert) ... ERROR
+test_timeframe_disabled (tests.test_signal_alert_router.SignalAlertRouterTest.test_timeframe_disabled) ... ok
+test_valid_buy_creates_alert (tests.test_signal_alert_router.SignalAlertRouterTest.test_valid_buy_creates_alert) ... FAIL
+test_valid_sell_creates_alert (tests.test_signal_alert_router.SignalAlertRouterTest.test_valid_sell_creates_alert) ... ok
+test_android_available (tests.test_alert_integration.AlertIntegrationTest.test_android_available) ... ok
+test_android_test_available (tests.test_alert_integration.AlertIntegrationTest.test_android_test_available) ... ok
+test_buy_dispatches (tests.test_alert_integration.AlertIntegrationTest.test_buy_dispatches) ... ok
+test_dispatcher_block_is_returned (tests.test_alert_integration.AlertIntegrationTest.test_dispatcher_block_is_returned) ... ok
+test_histories_available (tests.test_alert_integration.AlertIntegrationTest.test_histories_available) ... ok
+test_invalid_engine_response (tests.test_alert_integration.AlertIntegrationTest.test_invalid_engine_response) ... ok
+test_no_trade_methods (tests.test_alert_integration.AlertIntegrationTest.test_no_trade_methods) ... ok
+test_sell_dispatches (tests.test_alert_integration.AlertIntegrationTest.test_sell_dispatches) ... ok
+test_settings_available (tests.test_alert_integration.AlertIntegrationTest.test_settings_available) ... ok
+test_unprotected_signal_blocked (tests.test_alert_integration.AlertIntegrationTest.test_unprotected_signal_blocked) ... ok
+test_wait_does_not_dispatch (tests.test_alert_integration.AlertIntegrationTest.test_wait_does_not_dispatch) ... ok
+test_buy_setting_persists (tests.test_persistent_alert_router.PersistentAlertRouterTest.test_buy_setting_persists) ... ok
+test_disabled_alerts_block_signal (tests.test_persistent_alert_router.PersistentAlertRouterTest.test_disabled_alerts_block_signal) ... ok
+test_loads_default_settings (tests.test_persistent_alert_router.PersistentAlertRouterTest.test_loads_default_settings) ... ok
+test_market_setting_persists (tests.test_persistent_alert_router.PersistentAlertRouterTest.test_market_setting_persists) ... ok
+test_no_trade_methods (tests.test_persistent_alert_router.PersistentAlertRouterTest.test_no_trade_methods) ... ok
+test_reload (tests.test_persistent_alert_router.PersistentAlertRouterTest.test_reload) ... ok
+test_reset (tests.test_persistent_alert_router.PersistentAlertRouterTest.test_reset) ... ok
+test_route_signal (tests.test_persistent_alert_router.PersistentAlertRouterTest.test_route_signal) ... ok
+test_sell_setting_persists (tests.test_persistent_alert_router.PersistentAlertRouterTest.test_sell_setting_persists) ... ok
+test_setting_is_saved (tests.test_persistent_alert_router.PersistentAlertRouterTest.test_setting_is_saved) ... ok
+test_settings_path (tests.test_persistent_alert_router.PersistentAlertRouterTest.test_settings_path) ... ok
+test_sound_setting_persists (tests.test_persistent_alert_router.PersistentAlertRouterTest.test_sound_setting_persists) ... ok
+test_test_alert (tests.test_persistent_alert_router.PersistentAlertRouterTest.test_test_alert) ... ERROR
+test_timeframe_setting_persists (tests.test_persistent_alert_router.PersistentAlertRouterTest.test_timeframe_setting_persists) ... ok
+test_vibration_setting_persists (tests.test_persistent_alert_router.PersistentAlertRouterTest.test_vibration_setting_persists) ... ok
+test_buy_alert_allowed (tests.test_alert_manager.AlertManagerTest.test_buy_alert_allowed) ... ok
+test_buy_and_sell_have_separate_cooldowns (tests.test_alert_manager.AlertManagerTest.test_buy_and_sell_have_separate_cooldowns) ... ok
+test_clear (tests.test_alert_manager.AlertManagerTest.test_clear) ... ok
+test_cooldown_blocks_duplicate (tests.test_alert_manager.AlertManagerTest.test_cooldown_blocks_duplicate) ... ok
+test_cooldown_expires (tests.test_alert_manager.AlertManagerTest.test_cooldown_expires) ... ok
+test_direction_can_be_enabled (tests.test_alert_manager.AlertManagerTest.test_direction_can_be_enabled) ... ok
+test_latest_event (tests.test_alert_manager.AlertManagerTest.test_latest_event) ... ok
+test_minimum_strength_blocks (tests.test_alert_manager.AlertManagerTest.test_minimum_strength_blocks) ... ok
+test_no_trade_methods (tests.test_alert_manager.AlertManagerTest.test_no_trade_methods) ... ok
+test_sell_alert_allowed (tests.test_alert_manager.AlertManagerTest.test_sell_alert_allowed) ... ok
+test_settings (tests.test_alert_manager.AlertManagerTest.test_settings) ... ok
+test_test_alert (tests.test_alert_manager.AlertManagerTest.test_test_alert) ... ok
+test_wait_disabled_by_default (tests.test_alert_manager.AlertManagerTest.test_wait_disabled_by_default) ... ok
+test_buy_feedback (tests.test_alert_feedback.AlertFeedbackTest.test_buy_feedback) ... ok
+test_clear (tests.test_alert_feedback.AlertFeedbackTest.test_clear) ... ok
+test_default_settings (tests.test_alert_feedback.AlertFeedbackTest.test_default_settings) ... ok
+test_disabled_feedback (tests.test_alert_feedback.AlertFeedbackTest.test_disabled_feedback) ... ok
+test_history (tests.test_alert_feedback.AlertFeedbackTest.test_history) ... ok
+test_invalid_pattern (tests.test_alert_feedback.AlertFeedbackTest.test_invalid_pattern) ... ok
+test_long_pattern (tests.test_alert_feedback.AlertFeedbackTest.test_long_pattern) ... ok
+test_medium_pattern (tests.test_alert_feedback.AlertFeedbackTest.test_medium_pattern) ... ok
+test_no_trade_methods (tests.test_alert_feedback.AlertFeedbackTest.test_no_trade_methods) ... ok
+test_sell_feedback (tests.test_alert_feedback.AlertFeedbackTest.test_sell_feedback) ... ok
+test_settings (tests.test_alert_feedback.AlertFeedbackTest.test_settings) ... ok
+test_short_pattern (tests.test_alert_feedback.AlertFeedbackTest.test_short_pattern) ... ok
+test_sound_can_be_disabled (tests.test_alert_feedback.AlertFeedbackTest.test_sound_can_be_disabled) ... ok
+test_test_alert (tests.test_alert_feedback.AlertFeedbackTest.test_test_alert) ... ok
+test_vibration_can_be_disabled (tests.test_alert_feedback.AlertFeedbackTest.test_vibration_can_be_disabled) ... ok
+test_add_remove_market (tests.test_alert_config.AlertConfigTest.test_add_remove_market) ... ok
+test_add_remove_timeframe (tests.test_alert_config.AlertConfigTest.test_add_remove_timeframe) ... ok
+test_cooldown_cannot_be_negative (tests.test_alert_config.AlertConfigTest.test_cooldown_cannot_be_negative) ... ok
+test_default_configuration (tests.test_alert_config.AlertConfigTest.test_default_configuration) ... ok
+test_direction_settings (tests.test_alert_config.AlertConfigTest.test_direction_settings) ... ok
+test_markets (tests.test_alert_config.AlertConfigTest.test_markets) ... ok
+test_master_switch_blocks_directions (tests.test_alert_config.AlertConfigTest.test_master_switch_blocks_directions) ... ok
+test_no_trade_methods (tests.test_alert_config.AlertConfigTest.test_no_trade_methods) ... ok
+test_serialization_round_trip (tests.test_alert_config.AlertConfigTest.test_serialization_round_trip) ... ok
+test_sound_vibration (tests.test_alert_config.AlertConfigTest.test_sound_vibration) ... ok
+test_strength_is_clamped (tests.test_alert_config.AlertConfigTest.test_strength_is_clamped) ... ok
+test_timeframes (tests.test_alert_config.AlertConfigTest.test_timeframes) ... ok
+test_atomic_save_replaces_previous (tests.test_alert_persistence.AlertPersistenceTest.test_atomic_save_replaces_previous) ... ok
+test_custom_path (tests.test_alert_persistence.AlertPersistenceTest.test_custom_path) ... ok
+test_delete (tests.test_alert_persistence.AlertPersistenceTest.test_delete) ... ok
+test_delete_missing_file (tests.test_alert_persistence.AlertPersistenceTest.test_delete_missing_file) ... ok
+test_file_is_valid_json (tests.test_alert_persistence.AlertPersistenceTest.test_file_is_valid_json) ... ok
+test_invalid_json_returns_default (tests.test_alert_persistence.AlertPersistenceTest.test_invalid_json_returns_default) ... ok
+test_missing_file_returns_default (tests.test_alert_persistence.AlertPersistenceTest.test_missing_file_returns_default) ... ok
+test_no_trade_methods (tests.test_alert_persistence.AlertPersistenceTest.test_no_trade_methods) ... ok
+test_non_dictionary_json_returns_default (tests.test_alert_persistence.AlertPersistenceTest.test_non_dictionary_json_returns_default) ... ok
+test_save_and_load (tests.test_alert_persistence.AlertPersistenceTest.test_save_and_load) ... ok
+test_save_creates_file (tests.test_alert_persistence.AlertPersistenceTest.test_save_creates_file) ... ok
+
+======================================================================
+ERROR: test_feedback_matches_direction (tests.test_signal_alert_router.SignalAlertRouterTest.test_feedback_matches_direction)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/data/data/com.termux/files/home/THE_FX_TRADER_BOT_ZW/tests/test_signal_alert_router.py", line 346, in test_feedback_matches_direction
+    result.feedback.direction,
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'NoneType' object has no attribute 'direction'
+
+======================================================================
+ERROR: test_history (tests.test_signal_alert_router.SignalAlertRouterTest.test_history)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/data/data/com.termux/files/home/THE_FX_TRADER_BOT_ZW/tests/test_signal_alert_router.py", line 385, in test_history
+    router.alert_history()
+    ^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'SignalAlertRouter' object has no attribute 'alert_history'
+
+======================================================================
+ERROR: test_settings (tests.test_signal_alert_router.SignalAlertRouterTest.test_settings)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/data/data/com.termux/files/home/THE_FX_TRADER_BOT_ZW/tests/test_signal_alert_router.py", line 401, in test_settings
+    settings = router.settings()
+               ^^^^^^^^^^^^^^^
+AttributeError: 'SignalAlertRouter' object has no attribute 'settings'
+
+======================================================================
+ERROR: test_test_alert (tests.test_signal_alert_router.SignalAlertRouterTest.test_test_alert)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/data/data/com.termux/files/home/THE_FX_TRADER_BOT_ZW/tests/test_signal_alert_router.py", line 355, in test_test_alert
+    router.test_alert(
+    ^^^^^^^^^^^^^^^^^
+AttributeError: 'SignalAlertRouter' object has no attribute 'test_alert'
+
+======================================================================
+ERROR: test_test_alert (tests.test_persistent_alert_router.PersistentAlertRouterTest.test_test_alert)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/data/data/com.termux/files/home/THE_FX_TRADER_BOT_ZW/tests/test_persistent_alert_router.py", line 290, in test_test_alert
+    self.system.test_alert(
+    ~~~~~~~~~~~~~~~~~~~~~~^
+        "BUY",
+        ^^^^^^
+        now=1000,
+        ^^^^^^^^^
+    )
+    ^
+  File "/data/data/com.termux/files/home/THE_FX_TRADER_BOT_ZW/core/persistent_alert_router.py", line 246, in test_alert
+    return self.router.test_alert(
+           ^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'SignalAlertRouter' object has no attribute 'test_alert'
+
+======================================================================
+FAIL: test_buy_direction_disabled (tests.test_signal_alert_router.SignalAlertRouterTest.test_buy_direction_disabled)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/data/data/com.termux/files/home/THE_FX_TRADER_BOT_ZW/tests/test_signal_alert_router.py", line 252, in test_buy_direction_disabled
+    self.assertEqual(
+    ~~~~~~~~~~~~~~~~^
+        result.reason,
+        ^^^^^^^^^^^^^^
+        "DIRECTION_DISABLED",
+        ^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+AssertionError: 'BUY_DISABLED' != 'DIRECTION_DISABLED'
+- BUY_DISABLED
++ DIRECTION_DISABLED
+
+
+======================================================================
+FAIL: test_duplicate_alert_blocked (tests.test_signal_alert_router.SignalAlertRouterTest.test_duplicate_alert_blocked)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/data/data/com.termux/files/home/THE_FX_TRADER_BOT_ZW/tests/test_signal_alert_router.py", line 307, in test_duplicate_alert_blocked
+    self.assertEqual(
+    ~~~~~~~~~~~~~~~~^
+        second.reason,
+        ^^^^^^^^^^^^^^
+        "ALERT_COOLDOWN",
+        ^^^^^^^^^^^^^^^^^
+    )
+    ^
+AssertionError: 'ALERT_MANAGER_BLOCKED' != 'ALERT_COOLDOWN'
+- ALERT_MANAGER_BLOCKED
++ ALERT_COOLDOWN
+
+
+======================================================================
+FAIL: test_sell_direction_disabled (tests.test_signal_alert_router.SignalAlertRouterTest.test_sell_direction_disabled)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/data/data/com.termux/files/home/THE_FX_TRADER_BOT_ZW/tests/test_signal_alert_router.py", line 278, in test_sell_direction_disabled
+    self.assertEqual(
+    ~~~~~~~~~~~~~~~~^
+        result.reason,
+        ^^^^^^^^^^^^^^
+        "DIRECTION_DISABLED",
+        ^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+AssertionError: 'SELL_DISABLED' != 'DIRECTION_DISABLED'
+- SELL_DISABLED
++ DIRECTION_DISABLED
+
+
+======================================================================
+FAIL: test_valid_buy_creates_alert (tests.test_signal_alert_router.SignalAlertRouterTest.test_valid_buy_creates_alert)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/data/data/com.termux/files/home/THE_FX_TRADER_BOT_ZW/tests/test_signal_alert_router.py", line 78, in test_valid_buy_creates_alert
+    self.assertIsNotNone(
+    ~~~~~~~~~~~~~~~~~~~~^
+        result.feedback
+        ^^^^^^^^^^^^^^^
+    )
+    ^
+AssertionError: unexpectedly None
+
+----------------------------------------------------------------------
+Ran 93 tests in 0.094s
+
+FAILED (failures=4, errors=5)
