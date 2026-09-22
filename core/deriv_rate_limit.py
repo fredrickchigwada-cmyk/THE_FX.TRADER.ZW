@@ -72,7 +72,11 @@ class DerivRateLimitGuard:
             now - self.status.last_limited
         )
 
-        return elapsed >= self.status.retry_after
+        if elapsed >= self.status.retry_after:
+            self.reset()
+            return True
+
+        return False
 
     def remaining(
         self,

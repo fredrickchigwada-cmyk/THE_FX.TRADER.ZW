@@ -107,6 +107,12 @@ class ProductionRuntime:
         self._last_processed_epoch = None
         self._last_signal_key = None
 
+        # Latest real SignalEngine result exposed to Android.
+        self._latest_signal = None
+        self._history_loaded = False
+        self._history_request_sent = False
+        self._last_history_request_time = 0.0
+
         self.ws.on_message_callback = self._on_message
 
     # ---------------------------------------------------------
@@ -114,6 +120,8 @@ class ProductionRuntime:
     # ---------------------------------------------------------
 
     def _on_message(self, data):
+        if isinstance(data, dict) and "candles" in data:
+            self.handle_history_response(data)
         try:
             if not isinstance(data, dict):
                 return
@@ -123,6 +131,52 @@ class ProductionRuntime:
                 return
 
             msg_type = data.get("msg_type")
+
+            # Historical OHLC response.
+            # Load the 200 XAUUSD M1 candles into CandleEngine.
+            if msg_type == "candles" or data.get("candles") is not None:
+                try:
+                    candles = data.get("candles", [])
+
+                    if isinstance(candles, list):
+                        loaded = self.candles.load_history(
+                            self.PRIMARY_SYMBOL,
+                            self.PRIMARY_TIMEFRAME,
+                            candles,
+                        )
+
+                        if loaded >= 200:
+                            self._history_loaded = True
+                            self._history_request_sent = False
+
+                            print(
+                                "[HISTORY] XAUUSD M1 candles loaded:",
+                                loaded,
+                            )
+
+                            if (
+                                "insufficient" in
+                                self.status.last_error.lower()
+                            ):
+                                self.status.last_error = ""
+
+                        else:
+                            self._history_request_sent = False
+                            print(
+                                "[HISTORY] XAUUSD candles received:",
+                                loaded,
+                                "/200",
+                            )
+
+                except Exception as exc:
+                    self._history_request_sent = False
+                    self.status.last_error = str(exc)
+                    print(
+                        "[HISTORY] ERROR:",
+                        repr(exc),
+                    )
+
+                return
 
             # Stage 18I-B: consume Deriv's active-symbol response.
             if msg_type == "active_symbols" or data.get("active_symbols") is not None:
@@ -232,6 +286,12 @@ class ProductionRuntime:
                     self.status.last_price = price
                     self.status.last_epoch = epoch
 
+                    # A live tick proves the primary data path is active.
+                    # Do not leave an old startup rate-protection message
+                    # visible after live market data has arrived.
+                    if "rate protection" in self.status.last_error.lower():
+                        self.status.last_error = ""
+
         except Exception as exc:
             self.status.last_error = str(exc)
 
@@ -248,6 +308,26 @@ class ProductionRuntime:
             while time.time() < deadline:
                 if getattr(self.ws, "connected", False):
                     self.status.connected = True
+
+                    # XAUUSD is the primary market.
+                    # Subscribe directly to the verified Deriv symbol
+                    # immediately after connection. This must not depend
+                    # on active-symbol discovery.
+                    try:
+                        if not self.ws.is_rate_limited():
+                            if self.ws.subscribe_ticks(self.PRIMARY_SYMBOL):
+                                self._subscribed_markets.add(
+                                    self.PRIMARY_SYMBOL
+                                )
+                                self.status.rate_limited = False
+                    except Exception as exc:
+                        self.status.last_error = str(exc)
+
+                    # Do not request active_symbols immediately
+                    # after the XAUUSD subscription. The primary stream
+                    # is already known and this avoids an unnecessary
+                    # second Deriv request during startup.
+
                     self.status.healthy = True
                     return True
 
@@ -269,20 +349,21 @@ class ProductionRuntime:
             if not self.status.connected:
                 return False
 
-            # Stage 18I-C:
-            # Respect Deriv's minimum request interval.
-            #
-            # Discovery is the first request. XAUUSD and other available
-            # market subscriptions are performed after the active-symbol
-            # response is received.
-            if not self.ws.is_rate_limited():
-                self.ws.request_active_symbols()
+            # XAUUSD is the primary market.
+            # Subscribe directly to the verified Deriv symbol.
+            if self.ws.is_rate_limited():
+                self.status.rate_limited = True
+                self.status.last_error = (
+                    "Deriv request currently rate-limited"
+                )
+                return False
+
+            result = self.ws.subscribe_ticks(self.PRIMARY_SYMBOL)
+
+            if result:
+                self.status.rate_limited = False
                 return True
 
-            self.status.rate_limited = True
-            self.status.last_error = (
-                "Deriv request currently rate-limited"
-            )
             return False
 
         except Exception as exc:
@@ -372,6 +453,89 @@ class ProductionRuntime:
     # Signal analysis
     # ---------------------------------------------------------
 
+    def bootstrap_primary_history(self):
+        if self._history_loaded:
+            return True
+
+        if not self.status.connected:
+            return False
+
+        if self._history_request_sent:
+            return False
+
+        if self.ws.is_rate_limited():
+            self.status.rate_limited = True
+            return False
+
+        now = time.time()
+
+        # DerivWebSocket requires at least 1 second between requests.
+        if now - getattr(self.ws, "last_request_time", 0.0) < 1.2:
+            return False
+
+        if now - getattr(self, "_last_history_request_time", 0.0) < 10.0:
+            return False
+
+        self._last_history_request_time = now
+        self._history_request_sent = True
+
+        try:
+            result = self.ws.ticks_history(
+                self.PRIMARY_SYMBOL,
+                count=200,
+                granularity=60,
+            )
+
+            print("[HISTORY] XAUUSD M1 history request sent")
+            return result
+
+        except Exception as exc:
+            self._history_request_sent = False
+            self.status.last_error = str(exc)
+            print("[HISTORY] REQUEST ERROR:", repr(exc))
+            return False
+
+    def handle_history_response(self, data):
+        """
+        Consume a Deriv candle-history response and load it
+        into the existing CandleEngine.
+        """
+
+        try:
+            if not isinstance(data, dict):
+                return False
+
+            candles = data.get("candles")
+
+            if not isinstance(candles, list):
+                return False
+
+            loaded = self.candles.load_history(
+                self.PRIMARY_SYMBOL,
+                self.PRIMARY_TIMEFRAME,
+                candles,
+            )
+
+            if loaded >= 200:
+                self._history_loaded = True
+                self._history_request_sent = False
+
+                if (
+                    "history" in self.status.last_error.lower()
+                    or "insufficient" in self.status.last_error.lower()
+                ):
+                    self.status.last_error = ""
+
+                return True
+
+            self._history_request_sent = False
+            return False
+
+        except Exception as exc:
+            self._history_request_sent = False
+            self.status.last_error = str(exc)
+            return False
+
     def analyze_primary(self):
         try:
             candles = self.candles.get_history(
@@ -382,11 +546,18 @@ class ProductionRuntime:
             if not candles:
                 return None
 
-            return self.signal_engine.generate(
+            signal = self.signal_engine.generate(
                 self.PRIMARY_SYMBOL,
                 self.PRIMARY_TIMEFRAME,
                 candles,
             )
+
+            # Keep the exact SignalEngine result for the Android
+            # dashboard. No second signal calculation is performed.
+            with self._lock:
+                self._latest_signal = signal
+
+            return signal
 
         except Exception as exc:
             self.status.last_error = str(exc)
@@ -471,9 +642,15 @@ class ProductionRuntime:
             self.status.running = False
             return False
 
-        if not self.subscribe_primary():
-            self.status.running = False
-            return False
+        # Request XAUUSD historical candles after the initial tick
+        # subscription has had enough time to clear the request interval.
+        self._history_request_sent = False
+        self._history_loaded = False
+        self._last_history_request_time = 0.0
+
+        # XAUUSD is already subscribed by connect().
+        # Do not subscribe a second time here because the Deriv
+        # request guard intentionally blocks rapid duplicate requests.
 
         started = time.time()
         next_health = started
@@ -491,6 +668,16 @@ class ProductionRuntime:
             if now >= next_health:
                 self.health_check()
                 next_health = now + self.HEALTH_INTERVAL
+
+            # Bootstrap XAUUSD M1 history once the connection is ready.
+            # This is intentionally before signal analysis so the engine
+            # can receive the required 200 candles.
+            if (
+                self.status.connected
+                and not self._history_loaded
+                and not self._history_request_sent
+            ):
+                self.bootstrap_primary_history()
 
             # Analyze only when data is healthy.
             if self.status.connected and not self.status.stale:
@@ -548,6 +735,25 @@ class ProductionRuntime:
                 "primary_market": self.PRIMARY_MARKET,
                 "primary_symbol": self.PRIMARY_SYMBOL,
                 "timeframe": self.PRIMARY_TIMEFRAME,
+                "signal": (
+                    {
+                        "symbol": self._latest_signal.symbol,
+                        "timeframe": self._latest_signal.timeframe,
+                        "direction": self._latest_signal.direction,
+                        "strength": self._latest_signal.strength,
+                        "confirmations": self._latest_signal.confirmations,
+                        "entry": self._latest_signal.entry,
+                        "stop_loss": self._latest_signal.stop_loss,
+                        "tp1": self._latest_signal.tp1,
+                        "tp2": self._latest_signal.tp2,
+                        "invalidation": self._latest_signal.invalidation,
+                        "explanation": self._latest_signal.explanation,
+                        "candle_confirmed": self._latest_signal.candle_confirmed,
+                        "valid": self._latest_signal.valid,
+                    }
+                    if self._latest_signal is not None
+                    else None
+                ),
                 "signal_only": True,
                 "trade_execution": False,
                 "news_available": bool(

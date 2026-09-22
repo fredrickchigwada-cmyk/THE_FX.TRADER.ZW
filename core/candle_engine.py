@@ -119,6 +119,82 @@ class CandleEngine:
                 [],
             )
 
+    def load_history(
+        self,
+        symbol: str,
+        timeframe: str,
+        candles: list,
+    ) -> int:
+        """
+        Load historical OHLC candles into the local candle engine.
+
+        Expected candle dictionaries contain:
+        epoch/start, open, high, low, close, and optionally volume.
+
+        Market-data only. No trading/execution functionality.
+        """
+
+        if not symbol:
+            raise ValueError("Symbol cannot be empty.")
+
+        self.timeframe_seconds(timeframe)
+        self._ensure_symbol(symbol)
+
+        loaded = []
+
+        for item in candles or []:
+            if not isinstance(item, dict):
+                continue
+
+            try:
+                start = int(
+                    item.get("epoch", item.get("start"))
+                )
+
+                seconds = self.timeframe_seconds(timeframe)
+
+                candle = Candle(
+                    symbol=symbol,
+                    timeframe=timeframe,
+                    start=start,
+                    end=start + seconds,
+                    open=float(item["open"]),
+                    high=float(item["high"]),
+                    low=float(item["low"]),
+                    close=float(item["close"]),
+                    volume=int(item.get("volume", 0) or 0),
+                )
+
+                if (
+                    candle.open <= 0
+                    or candle.high <= 0
+                    or candle.low <= 0
+                    or candle.close <= 0
+                    or candle.high < candle.low
+                ):
+                    continue
+
+                loaded.append(candle)
+
+            except (KeyError, TypeError, ValueError):
+                continue
+
+        loaded.sort(key=lambda c: c.start)
+
+        # Remove duplicate candle periods.
+        unique = {}
+        for candle in loaded:
+            unique[candle.start] = candle
+
+        loaded = list(unique.values())
+
+        # Keep only the configured history size.
+        self.history[symbol][timeframe] = (
+            loaded[-self.max_history:]
+        )
+
+        return len(self.history[symbol][timeframe])
+
     def update_tick(
         self,
         symbol: str,

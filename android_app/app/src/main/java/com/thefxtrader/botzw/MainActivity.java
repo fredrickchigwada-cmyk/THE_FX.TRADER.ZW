@@ -316,7 +316,7 @@ public class MainActivity extends Activity {
                     @Override
                     public void run() {
 
-                        HttpURLConnection connection =
+                        HttpURLConnection httpConnection =
                                 null;
 
                         try {
@@ -328,20 +328,20 @@ public class MainActivity extends Activity {
                                     (HttpURLConnection)
                                             url.openConnection();
 
-                            connection.setRequestMethod(
+                            httpConnection.setRequestMethod(
                                     "GET"
                             );
 
-                            connection.setConnectTimeout(
+                            httpConnection.setConnectTimeout(
                                     1500
                             );
 
-                            connection.setReadTimeout(
+                            httpConnection.setReadTimeout(
                                     1500
                             );
 
                             int code =
-                                    connection.getResponseCode();
+                                    httpConnection.getResponseCode();
 
                             if (code != 200) {
                                 throw new Exception(
@@ -350,7 +350,7 @@ public class MainActivity extends Activity {
                             }
 
                             InputStream input =
-                                    connection.getInputStream();
+                                    httpConnection.getInputStream();
 
                             BufferedReader reader =
                                     new BufferedReader(
@@ -416,7 +416,7 @@ public class MainActivity extends Activity {
                         } finally {
 
                             if (connection != null) {
-                                connection.disconnect();
+                                httpConnection.disconnect();
                             }
                         }
                     }

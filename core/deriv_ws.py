@@ -23,6 +23,8 @@ class DerivWebSocket:
     WS_URL = "wss://api.derivws.com/trading/v1/options/ws/public"
 
     # Conservative client-side protection.
+    # Deriv request spacing. A subscription is allowed immediately
+    # after a fresh WebSocket connection; subsequent requests are spaced.
     MIN_REQUEST_INTERVAL = 1.0
     DEFAULT_BACKOFF = 10.0
     MAX_BACKOFF = 300.0
@@ -218,6 +220,38 @@ class DerivWebSocket:
             "active_symbols": "brief",
             "req_id": 1,
         })
+
+    def ticks_history(
+        self,
+        symbol: str,
+        count: int = 200,
+        granularity: int = 60,
+    ):
+        """
+        Request historical tick data from Deriv.
+
+        This is market-data only.
+        No trading or execution functionality.
+        """
+
+        if not symbol:
+            raise ValueError("symbol is required")
+
+        if count < 1:
+            raise ValueError("count must be positive")
+
+        if granularity < 1:
+            raise ValueError("granularity must be positive")
+
+        request = {
+            "ticks_history": str(symbol),
+            "count": int(count),
+            "end": "latest",
+            "style": "candles",
+            "granularity": int(granularity),
+        }
+
+        return self.send(request)
 
     def subscribe_ticks(self, symbol: str):
         """
