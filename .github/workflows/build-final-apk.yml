@@ -1,4 +1,4 @@
-name: Build Final Android APK
+name: Build Debug and Release APKs
 
 on:
   push:
@@ -7,19 +7,18 @@ on:
     paths:
       - "android_app/**"
       - ".github/workflows/build-final-apk.yml"
-
   workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
-  build-apk:
-    name: Build THE_FX.TRADER.BOT.ZW APK
+  build-apks:
+    name: Build THE_FX.TRADER.BOT.ZW APKs
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout GitHub source
+      - name: Checkout source
         uses: actions/checkout@v4
 
       - name: Set up Java 17
@@ -31,7 +30,7 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install Android SDK packages
+      - name: Install Android SDK
         run: |
           sdkmanager --install \
             "platform-tools" \
@@ -43,51 +42,65 @@ jobs:
         with:
           gradle-version: "9.6.0"
 
-      - name: Verify Android project
-        working-directory: android_app
-        run: |
-          echo "=== PROJECT ==="
-          pwd
-          echo
-          echo "=== MANIFEST ==="
-          cat app/src/main/AndroidManifest.xml
-          echo
-          echo "=== APP GRADLE ==="
-          cat app/build.gradle
-
-      - name: Build debug APK
+      - name: Build DEBUG APK
         working-directory: android_app
         run: |
           gradle --no-daemon --stacktrace assembleDebug
 
-      - name: Verify APK
+      - name: Build RELEASE APK
         working-directory: android_app
         run: |
-          APK="app/build/outputs/apk/debug/app-debug.apk"
+          gradle --no-daemon --stacktrace assembleRelease
 
-          test -f "$APK"
+      - name: Verify APKs
+        working-directory: android_app
+        run: |
+          DEBUG="app/build/outputs/apk/debug/app-debug.apk"
+          RELEASE="app/build/outputs/apk/release/app-release-unsigned.apk"
 
-          echo "APK:"
-          ls -lh "$APK"
+          echo "=== DEBUG APK ==="
+          test -f "$DEBUG"
+          ls -lh "$DEBUG"
 
           echo
-          echo "APK information:"
-          $ANDROID_HOME/build-tools/35.0.0/apksigner verify --verbose "$APK"
+          echo "=== RELEASE APK ==="
+          test -f "$RELEASE"
+          ls -lh "$RELEASE"
 
-      - name: Upload APK artifact
+          echo
+          echo "=== APK FILES ==="
+          find app/build/outputs/apk -type f -name "*.apk" -exec ls -lh {} \;
+
+      - name: Upload DEBUG APK
         uses: actions/upload-artifact@v4
         with:
-          name: THE_FX.TRADER.BOT.ZW
+          name: THE_FX.TRADER.BOT.ZW-debug
           path: android_app/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
 
-      - name: Create GitHub release
+      - name: Upload RELEASE APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: THE_FX.TRADER.BOT.ZW-release
+          path: android_app/app/build/outputs/apk/release/app-release-unsigned.apk
+          if-no-files-found: error
+
+      - name: Prepare release files
+        run: |
+          mkdir -p release
+          cp android_app/app/build/outputs/apk/debug/app-debug.apk \
+             release/THE_FX.TRADER.BOT.ZW-debug.apk
+          cp android_app/app/build/outputs/apk/release/app-release-unsigned.apk \
+             release/THE_FX.TRADER.BOT.ZW-release-unsigned.apk
+
+      - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          APK="android_app/app/build/outputs/apk/debug/app-debug.apk"
           TAG="apk-${{ github.run_number }}"
 
-          gh release create "$TAG" "$APK" \
+          gh release create "$TAG" \
+            release/THE_FX.TRADER.BOT.ZW-debug.apk \
+            release/THE_FX.TRADER.BOT.ZW-release-unsigned.apk \
             --title "THE_FX.TRADER.BOT.ZW APK ${{ github.run_number }}" \
-            --notes "Built automatically from commit ${{ github.sha }}."
+            --notes "Debug and release APK builds from commit ${{ github.sha }}."
