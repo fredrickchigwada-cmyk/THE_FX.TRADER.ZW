@@ -77,6 +77,11 @@ jobs:
 
           echo "[OK] Android source verified"
 
+      - name: Run Final Pre-Release Audit
+        run: |
+          set -e
+          python3 pre_release_check.py
+
       - name: Build Debug APK
         working-directory: android_app
         run: |
