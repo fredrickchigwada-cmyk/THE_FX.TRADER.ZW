@@ -345,40 +345,52 @@ class ProductionRuntime:
     # ---------------------------------------------------------
 
     def subscribe_primary(self):
-        try:
-            if not self.status.connected:
-                return False
+        """
+        Request primary-market discovery.
 
-            # XAUUSD is the primary market.
-            # Subscribe directly to the verified Deriv symbol.
+        Market-data only.
+        No order execution.
+
+        Rate-limit protection is mandatory.
+        """
+
+        # A discovery request is only valid after connection.
+        if not self.status.connected:
+            self.status.last_error = "Not connected"
+            return False
+
+        # NEVER send a new request while Deriv is rate limited.
+        try:
             if self.ws.is_rate_limited():
                 self.status.rate_limited = True
                 self.status.last_error = (
-                    "Deriv request currently rate-limited"
+                    "Deriv connection is rate-limited"
                 )
                 return False
-
-            result = self.ws.subscribe_ticks(self.PRIMARY_SYMBOL)
-
-            if result:
-                self.status.rate_limited = False
-                return True
-
+        except Exception as exc:
+            self.status.last_error = str(exc)
             return False
+
+        # Request active-symbol discovery.
+        try:
+            self.ws.request_active_symbols()
+
+            self.status.rate_limited = False
+            self.status.last_error = ""
+
+            return True
 
         except Exception as exc:
             self.status.last_error = str(exc)
 
             try:
-                self.status.rate_limited = self.ws.is_rate_limited()
+                self.status.rate_limited = bool(
+                    self.ws.is_rate_limited()
+                )
             except Exception:
                 pass
 
             return False
-
-    # ---------------------------------------------------------
-    # Health check
-    # ---------------------------------------------------------
 
     def health_check(self):
         try:
