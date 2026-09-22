@@ -13,4 +13,16 @@ android {
         versionCode 1
         versionName '1.0.0'
     }
+
+    buildTypes {
+        debug {
+            debuggable true
+        }
+
+        release {
+            minifyEnabled false
+            shrinkResources false
+            debuggable false
+        }
+    }
 }

@@ -74,7 +74,7 @@ echo "DEX added: OK"
 echo
 echo "[5/7] Aligning APK..."
 
-"$PREFIX/bin/zipalign" -f -p 4 "$UNSIGNED" "$ALIGNED"
+zipalign -f -p 4 "$UNSIGNED" "$ALIGNED"
 
 echo "ZIP alignment: OK"
 

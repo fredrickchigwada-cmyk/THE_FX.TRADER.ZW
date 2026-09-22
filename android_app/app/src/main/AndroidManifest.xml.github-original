@@ -1,20 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest
-    xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.thefxtrader.botzw">
+<manifest package="com.thefxtrader.botzw" xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
 
     <application
-        android:label="THE_FX.TRADER.BOT.ZW"
-        android:allowBackup="false"
-        android:supportsRtl="true"
-        android:usesCleartextTraffic="true">
+        android:label="THE_FX.TRADER.BOT.ZW">
 
         <activity
-            android:name=".MainActivity"
-            android:screenOrientation="portrait"
-            android:exported="true">
+            android:name=".MainActivity">
 
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -24,4 +17,5 @@
         </activity>
 
     </application>
+
 </manifest>
