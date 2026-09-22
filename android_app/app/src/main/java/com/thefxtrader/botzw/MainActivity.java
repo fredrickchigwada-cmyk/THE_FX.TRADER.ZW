@@ -324,7 +324,7 @@ public class MainActivity extends Activity {
                             URL url =
                                     new URL(API);
 
-                            connection =
+                            httpConnection =
                                     (HttpURLConnection)
                                             url.openConnection();
 
