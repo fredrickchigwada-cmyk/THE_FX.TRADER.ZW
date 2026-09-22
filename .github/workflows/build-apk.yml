@@ -1,0 +1,67 @@
+name: Build THE_FX.TRADER BOT
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            git zip unzip \
+            openjdk-17-jdk \
+            python3 python3-pip python3-venv \
+            build-essential libffi-dev libssl-dev \
+            libjpeg-dev zlib1g-dev libfreetype6-dev
+
+      - name: Configure Java 17
+        run: |
+          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> "$GITHUB_ENV"
+          echo "/usr/lib/jvm/java-17-openjdk-amd64/bin" >> "$GITHUB_PATH"
+          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+          export PATH="$JAVA_HOME/bin:$PATH"
+          java -version
+          javac -version
+
+      - name: Install Python build tools
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install "cython<3.1"
+          python3 -m pip install "buildozer==1.5.0"
+
+      - name: Verify Java before Buildozer
+        run: |
+          echo "JAVA_HOME=$JAVA_HOME"
+          which java
+          java -version
+          ./gradlew --version 2>/dev/null || true
+
+      - name: Build APK
+        run: |
+          set -o pipefail
+          buildozer -v android debug 2>&1 | tee buildozer.log
+
+      - name: Upload Buildozer log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: buildozer-log
+          path: buildozer.log
+          if-no-files-found: ignore
+
+      - name: Upload APK
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: THE-FX-TRADER-BOT-APK
+          path: bin/*.apk
