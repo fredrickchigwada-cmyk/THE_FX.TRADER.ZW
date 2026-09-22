@@ -1,0 +1,6 @@
+app/src/main/res/values/themes.xml:4: error: Error retrieving parent for item: No resource found that matches the given name '@android:style/Theme.Material.NoActionBar'.
+
+app/src/main/res/values/themes.xml:5: error: Error: No resource found that matches the given name: attr 'android:fontFamily'.
+
+app/src/main/res/values/themes.xml:6: error: Error: No resource found that matches the given name: attr 'android:windowActionModeOverlay'.
+

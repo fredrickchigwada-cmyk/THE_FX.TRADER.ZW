@@ -1,0 +1,45 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.thefxtrader.botzw.app-mergeDebugResources-1:/values/values.xml",
+            "map": [
+                {
+                    "source": "/data/data/com.termux/files/home/THE_FX_TRADER_BOT_ZW/android_app/app/src/main/res/values/strings.xml",
+                    "from": {
+                        "startLines": "1",
+                        "startColumns": "4",
+                        "startOffsets": "16",
+                        "endColumns": "57",
+                        "endOffsets": "69"
+                    },
+                    "to": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "57",
+                        "endOffsets": "108"
+                    }
+                },
+                {
+                    "source": "/data/data/com.termux/files/home/THE_FX_TRADER_BOT_ZW/android_app/app/src/main/res/values/themes.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endLines": "3",
+                        "endColumns": "12",
+                        "endOffsets": "91"
+                    },
+                    "to": {
+                        "startLines": "3",
+                        "startColumns": "4",
+                        "startOffsets": "113",
+                        "endLines": "4",
+                        "endColumns": "12",
+                        "endOffsets": "149"
+                    }
+                }
+            ]
+        }
+    ]
+}

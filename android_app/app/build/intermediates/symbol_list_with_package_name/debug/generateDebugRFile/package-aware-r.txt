@@ -1,0 +1,3 @@
+com.thefxtrader.botzw
+string app_name
+style AppTheme
