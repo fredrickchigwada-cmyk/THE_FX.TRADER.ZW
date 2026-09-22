@@ -1,10 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+<manifest
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.thefxtrader.botzw">
 
     <uses-permission android:name="android.permission.INTERNET" />
 
     <application
-        android:label="THE_FX.TRADER.BOT.ZW">
+        android:label="THE_FX.TRADER.BOT.ZW"
+        android:usesCleartextTraffic="true"
+        android:allowBackup="false"
+        android:supportsRtl="true">
 
         <activity
             android:name=".MainActivity"
