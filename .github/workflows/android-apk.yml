@@ -21,50 +21,41 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Install Android SDK command line tools
+      - name: Verify Java
         run: |
           set -e
-          SDK_ROOT="$RUNNER_TEMP/android-sdk"
-          CMDLINE_TOOLS="$SDK_ROOT/cmdline-tools"
-          mkdir -p "$CMDLINE_TOOLS"
+          java -version
+          javac -version
 
-          curl -L -o "$RUNNER_TEMP/commandlinetools.zip" \
-            https://dl.google.com/android/repository/commandlinetools-linux-13114758_latest.zip
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
 
-          rm -rf "$CMDLINE_TOOLS/latest"
-          mkdir -p "$CMDLINE_TOOLS/latest"
-
-          unzip -q "$RUNNER_TEMP/commandlinetools.zip" -d "$CMDLINE_TOOLS"
-          mv "$CMDLINE_TOOLS/cmdline-tools/"* "$CMDLINE_TOOLS/latest/"
-          rm -rf "$CMDLINE_TOOLS/cmdline-tools"
-
-          echo "ANDROID_HOME=$SDK_ROOT" >> "$GITHUB_ENV"
-          echo "ANDROID_SDK_ROOT=$SDK_ROOT" >> "$GITHUB_ENV"
-          echo "$SDK_ROOT/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
-          echo "$SDK_ROOT/platform-tools" >> "$GITHUB_PATH"
-
-      - name: Verify sdkmanager
+      - name: Install Android SDK packages
         run: |
           set -e
-          which sdkmanager
-          sdkmanager --version
-
-      - name: Accept Android licenses
-        run: |
-          yes | sdkmanager --licenses >/dev/null 2>&1 || true
-
-      - name: Install Android SDK components
-        run: |
-          set -e
-          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+          sdkmanager --install \
+            "platform-tools" \
+            "platforms;android-35" \
+            "build-tools;35.0.0"
 
       - name: Verify Android SDK
         run: |
           set -e
-          sdkmanager --list_installed | grep -E \
-            'platform-tools|platforms;android-35|build-tools;35.0.0'
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
+          sdkmanager --list_installed
+          test -d "$ANDROID_HOME/platforms/android-35"
+          test -d "$ANDROID_HOME/build-tools/35.0.0"
 
-      - name: Build APK
+      - name: Verify Android source
+        run: |
+          set -e
+          test -f android_app/app/src/main/AndroidManifest.xml
+          test -f android_app/app/src/main/java/com/thefxtrader/botzw/MainActivity.java
+          test -f android_app/app/build.gradle
+          echo "[OK] Android source files found"
+
+      - name: Build Debug APK
         working-directory: android_app
         run: |
           set -e
@@ -75,11 +66,12 @@ jobs:
           set -e
           APK="android_app/app/build/outputs/apk/debug/app-debug.apk"
           test -f "$APK"
+          echo "[OK] APK created"
           ls -lh "$APK"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: THE_FX.TRADER.BOT.ZW-debug-apk
+          name: THE_FX_TRADER_BOT_ZW-debug-apk
           path: android_app/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
