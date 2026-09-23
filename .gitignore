@@ -1,23 +1,11 @@
-# Android/Gradle generated files
-android_app/.gradle/
-android_app/build/
-android_app/.cxx/
-
-# Local Android SDK configuration
-android_app/local.properties
-
-# APK/output files
-*.apk
-*.idsig
-
-# Gradle logs/reports
-android_app/gradle_build.log
-android_app/**/reports/
-android_app/**/outputs/
-
-# Python cache
+.env
+.venv/
 __pycache__/
-*.py[cod]
-
-# Test/runtime generated files
+*.pyc
 *.log
+*.db
+*.sqlite
+*.sqlite3
+.pytest_cache/
+config/deriv_oauth.env
+*.env

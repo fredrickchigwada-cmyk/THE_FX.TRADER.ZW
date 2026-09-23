@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: the-fx-trader-zw
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python -m app.api_server
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: DERIV_ENV
+        value: production
+      - key: DERIV_APP_ID
+        sync: false
+      - key: DERIV_REDIRECT_URI
+        sync: false
+      - key: DERIV_OAUTH_AUTH_URL
+        value: https://auth.deriv.com/oauth2/auth
+      - key: DERIV_OAUTH_TOKEN_URL
+        value: https://auth.deriv.com/oauth2/token
+      - key: DERIV_API_BASE
+        value: https://api.derivws.com
+      - key: DERIV_OAUTH_SCOPE
+        value: trade
