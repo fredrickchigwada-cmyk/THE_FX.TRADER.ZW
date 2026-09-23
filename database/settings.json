@@ -1,0 +1,18 @@
+{
+  "symbol": "XAUUSD",
+  "timeframe": "M15",
+  "trade_mode": "DEMO",
+  "auto_trade_enabled": false,
+  "real_trading_enabled": false,
+  "risk_per_trade": 1.0,
+  "max_daily_loss": 3.0,
+  "max_open_trades": 1,
+  "min_lot": 0.01,
+  "max_lot": 0.5,
+  "lot_step": 0.01,
+  "default_lot": 0.01,
+  "risk_based_sizing": true,
+  "alerts_enabled": true,
+  "sound_enabled": true,
+  "vibration_enabled": true
+}
