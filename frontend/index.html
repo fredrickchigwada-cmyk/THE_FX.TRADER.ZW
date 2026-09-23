@@ -1,0 +1,2279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport"
+      content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#050505">
+<meta name="mobile-web-app-capable" content="yes">
+<title>THE_FX.TRADER.BOT.ZW</title>
+
+<style>
+:root{
+  --bg:#050505;
+  --panel:#0d0f0f;
+  --panel2:#121515;
+  --gold:#d6ad45;
+  --gold2:#f0ce68;
+  --green:#00c987;
+  --red:#ff4d4d;
+  --orange:#ffae42;
+  --text:#f4f4f4;
+  --muted:#89918f;
+  --border:#252a29;
+  --blue:#3d9cff;
+}
+
+*{
+  box-sizing:border-box;
+  -webkit-tap-highlight-color:transparent;
+}
+
+html,body{
+  margin:0;
+  padding:0;
+  width:100%;
+  min-height:100%;
+  background:var(--bg);
+  color:var(--text);
+  font-family:Arial,Helvetica,sans-serif;
+}
+
+body{
+  overflow-x:hidden;
+}
+
+button{
+  font:inherit;
+}
+
+.hidden{
+  display:none!important;
+}
+
+/* STARTUP */
+#startup{
+  position:fixed;
+  inset:0;
+  z-index:9999;
+  background:#000;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+}
+
+.startup-inner{
+  width:min(92%,430px);
+}
+
+.logo-mark{
+  width:112px;
+  height:112px;
+  margin:0 auto 20px;
+  border:2px solid var(--gold);
+  border-radius:28px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:var(--gold2);
+  font-size:38px;
+  font-weight:900;
+  box-shadow:0 0 35px rgba(214,173,69,.15);
+}
+
+.startup-title{
+  color:var(--gold2);
+  font-size:22px;
+  font-weight:900;
+  letter-spacing:1px;
+}
+
+.startup-sub{
+  margin-top:9px;
+  color:var(--muted);
+  font-size:13px;
+}
+
+.loader{
+  width:190px;
+  height:3px;
+  background:#1d211f;
+  border-radius:10px;
+  overflow:hidden;
+  margin:26px auto 12px;
+}
+
+.loader span{
+  display:block;
+  width:40%;
+  height:100%;
+  background:var(--gold);
+  animation:load 1.3s infinite;
+}
+
+@keyframes load{
+  from{transform:translateX(-120%)}
+  to{transform:translateX(400%)}
+}
+
+/* LOGIN */
+#loginScreen{
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+}
+
+.login-card{
+  width:min(100%,430px);
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:22px;
+  padding:26px;
+  text-align:center;
+}
+
+.login-card h1{
+  color:var(--gold2);
+  font-size:21px;
+  margin:0 0 8px;
+}
+
+.login-card p{
+  color:var(--muted);
+  font-size:13px;
+  line-height:1.5;
+}
+
+.primary-btn,
+.gold-btn{
+  border:0;
+  border-radius:12px;
+  min-height:48px;
+  padding:0 18px;
+  font-weight:800;
+  cursor:pointer;
+}
+
+.gold-btn{
+  width:100%;
+  background:var(--gold);
+  color:#080808;
+}
+
+.primary-btn{
+  background:#181d1b;
+  color:#fff;
+  border:1px solid var(--border);
+}
+
+.status-line{
+  margin-top:16px;
+  color:var(--muted);
+  font-size:12px;
+}
+
+/* APP */
+#app{
+  min-height:100vh;
+  padding-bottom:80px;
+}
+
+.topbar{
+  position:sticky;
+  top:0;
+  z-index:100;
+  height:62px;
+  background:rgba(5,5,5,.96);
+  border-bottom:1px solid var(--border);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:0 14px;
+  backdrop-filter:blur(10px);
+}
+
+.brand{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+.brand-icon{
+  width:34px;
+  height:34px;
+  border:1px solid var(--gold);
+  border-radius:9px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:var(--gold2);
+  font-weight:900;
+  font-size:12px;
+}
+
+.brand-text strong{
+  display:block;
+  font-size:12px;
+  color:var(--gold2);
+}
+
+.brand-text small{
+  color:var(--muted);
+  font-size:9px;
+}
+
+.connection{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  font-size:10px;
+  color:var(--muted);
+}
+
+.dot{
+  width:8px;
+  height:8px;
+  border-radius:50%;
+  background:var(--orange);
+}
+
+.dot.online{
+  background:var(--green);
+  box-shadow:0 0 8px rgba(0,201,135,.6);
+}
+
+.dot.offline{
+  background:var(--red);
+}
+
+/* CONTENT */
+.content{
+  width:min(100%,1050px);
+  margin:auto;
+  padding:14px;
+}
+
+.page{
+  display:none;
+}
+
+.page.active{
+  display:block;
+}
+
+.page-title{
+  margin:4px 0 14px;
+  font-size:20px;
+  font-weight:900;
+}
+
+.page-subtitle{
+  color:var(--muted);
+  font-size:12px;
+  margin-top:-8px;
+  margin-bottom:16px;
+}
+
+/* MARKET HEADER */
+.market-card{
+  background:linear-gradient(135deg,#101211,#080909);
+  border:1px solid #29251b;
+  border-radius:18px;
+  padding:16px;
+  margin-bottom:12px;
+}
+
+.market-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+
+.symbol{
+  color:var(--gold2);
+  font-size:20px;
+  font-weight:900;
+}
+
+.market-label{
+  color:var(--muted);
+  font-size:10px;
+  margin-top:3px;
+}
+
+.price{
+  font-size:27px;
+  font-weight:900;
+}
+
+.price-change{
+  color:var(--green);
+  font-size:11px;
+  text-align:right;
+  margin-top:3px;
+}
+
+/* SIGNAL */
+.signal-card{
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:18px;
+  padding:18px;
+  margin-bottom:12px;
+}
+
+.signal-top{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+
+.signal-label{
+  color:var(--muted);
+  font-size:11px;
+  text-transform:uppercase;
+}
+
+.signal-badge{
+  min-width:110px;
+  text-align:center;
+  padding:10px 16px;
+  border-radius:12px;
+  font-size:18px;
+  font-weight:900;
+  background:#242424;
+  color:#aaa;
+}
+
+.signal-badge.buy{
+  background:rgba(0,201,135,.14);
+  color:var(--green);
+  border:1px solid rgba(0,201,135,.3);
+}
+
+.signal-badge.sell{
+  background:rgba(255,77,77,.12);
+  color:var(--red);
+  border:1px solid rgba(255,77,77,.3);
+}
+
+.signal-badge.wait{
+  background:rgba(255,174,66,.1);
+  color:var(--orange);
+  border:1px solid rgba(255,174,66,.25);
+}
+
+.strength{
+  margin-top:18px;
+}
+
+.strength-row{
+  display:flex;
+  justify-content:space-between;
+  font-size:11px;
+  color:var(--muted);
+}
+
+.strength-bar{
+  height:7px;
+  margin-top:7px;
+  border-radius:10px;
+  background:#1c201f;
+  overflow:hidden;
+}
+
+.strength-fill{
+  height:100%;
+  width:0%;
+  background:var(--gold);
+  transition:.3s;
+}
+
+/* GRID */
+.grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+  margin-bottom:12px;
+}
+
+.grid3{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:10px;
+}
+
+@media(min-width:760px){
+  .grid{
+    grid-template-columns:repeat(4,minmax(0,1fr));
+  }
+}
+
+.metric{
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:13px;
+}
+
+.metric-label{
+  color:var(--muted);
+  font-size:9px;
+  text-transform:uppercase;
+}
+
+.metric-value{
+  margin-top:7px;
+  font-size:16px;
+  font-weight:800;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+/* TIMEFRAMES */
+.tf-row{
+  display:flex;
+  gap:7px;
+  overflow-x:auto;
+  padding-bottom:4px;
+  margin-bottom:12px;
+}
+
+.tf-btn{
+  flex:0 0 auto;
+  min-width:58px;
+  height:38px;
+  border-radius:10px;
+  border:1px solid var(--border);
+  background:#101313;
+  color:#aeb5b2;
+  font-weight:800;
+  font-size:11px;
+}
+
+.tf-btn.active{
+  color:#050505;
+  background:var(--gold);
+  border-color:var(--gold);
+}
+
+/* PANELS */
+.panel{
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:16px;
+  padding:15px;
+  margin-bottom:12px;
+}
+
+.panel-title{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:12px;
+  font-weight:900;
+  font-size:13px;
+}
+
+.panel-title span{
+  color:var(--gold2);
+}
+
+.list-row{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  padding:11px 0;
+  border-bottom:1px solid #191d1c;
+  font-size:11px;
+}
+
+.list-row:last-child{
+  border-bottom:0;
+}
+
+.muted{
+  color:var(--muted);
+}
+
+.green{
+  color:var(--green);
+}
+
+.red{
+  color:var(--red);
+}
+
+.gold{
+  color:var(--gold2);
+}
+
+.orange{
+  color:var(--orange);
+}
+
+/* SETUP */
+.setup-grid{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:8px;
+}
+
+.setup-item{
+  background:#090b0b;
+  border:1px solid var(--border);
+  border-radius:11px;
+  padding:11px;
+}
+
+.setup-item small{
+  display:block;
+  color:var(--muted);
+  font-size:9px;
+}
+
+.setup-item strong{
+  display:block;
+  margin-top:5px;
+  font-size:14px;
+}
+
+/* EXECUTE */
+.execute-box{
+  border:1px solid #3a3020;
+  background:linear-gradient(135deg,#15120b,#0b0c0c);
+  border-radius:16px;
+  padding:16px;
+  margin-bottom:12px;
+}
+
+.execute-btn{
+  width:100%;
+  min-height:54px;
+  border:0;
+  border-radius:13px;
+  color:#fff;
+  font-weight:900;
+  font-size:15px;
+  background:#444;
+}
+
+.execute-btn:disabled{
+  opacity:.65;
+}
+
+.confirm-text{
+  text-align:center;
+  color:var(--muted);
+  font-size:10px;
+  margin-top:8px;
+}
+
+/* NEWS */
+.news-impact{
+  padding:4px 7px;
+  border-radius:6px;
+  font-size:9px;
+  font-weight:900;
+}
+
+.high{
+  color:var(--red);
+  background:rgba(255,77,77,.12);
+}
+
+.medium{
+  color:var(--orange);
+  background:rgba(255,174,66,.1);
+}
+
+.low{
+  color:var(--green);
+  background:rgba(0,201,135,.1);
+}
+
+/* NAV */
+.bottom-nav{
+  position:fixed;
+  z-index:200;
+  left:0;
+  right:0;
+  bottom:0;
+  height:70px;
+  background:rgba(7,8,8,.98);
+  border-top:1px solid var(--border);
+  display:flex;
+  overflow-x:auto;
+}
+
+.nav-btn{
+  min-width:80px;
+  flex:1;
+  border:0;
+  background:transparent;
+  color:#737b78;
+  font-size:9px;
+  font-weight:700;
+}
+
+.nav-btn span{
+  display:block;
+  font-size:18px;
+  margin-bottom:3px;
+}
+
+.nav-btn.active{
+  color:var(--gold2);
+}
+
+/* MODAL */
+.modal{
+  position:fixed;
+  inset:0;
+  z-index:5000;
+  background:rgba(0,0,0,.78);
+  display:none;
+  align-items:flex-end;
+  justify-content:center;
+}
+
+.modal.show{
+  display:flex;
+}
+
+.modal-card{
+  width:min(100%,520px);
+  max-height:90vh;
+  overflow:auto;
+  background:#101212;
+  border:1px solid var(--border);
+  border-radius:22px 22px 0 0;
+  padding:20px;
+}
+
+.modal-card h2{
+  margin:0 0 8px;
+  color:var(--gold2);
+  font-size:18px;
+}
+
+.modal-card p{
+  color:var(--muted);
+  font-size:12px;
+  line-height:1.5;
+}
+
+.modal-actions{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:9px;
+  margin-top:16px;
+}
+
+.cancel-btn{
+  min-height:48px;
+  border:1px solid var(--border);
+  border-radius:11px;
+  background:#171a19;
+  color:#fff;
+}
+
+.confirm-btn{
+  min-height:48px;
+  border:0;
+  border-radius:11px;
+  background:var(--green);
+  color:#001b12;
+  font-weight:900;
+}
+
+/* TOGGLE */
+.setting{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:15px;
+  padding:14px 0;
+  border-bottom:1px solid #191d1c;
+}
+
+.setting:last-child{
+  border-bottom:0;
+}
+
+.setting strong{
+  font-size:12px;
+}
+
+.setting small{
+  display:block;
+  color:var(--muted);
+  font-size:10px;
+  margin-top:4px;
+}
+
+.toggle{
+  width:48px;
+  height:27px;
+  border-radius:20px;
+  background:#292d2c;
+  padding:3px;
+  flex:0 0 auto;
+}
+
+.toggle i{
+  display:block;
+  width:21px;
+  height:21px;
+  border-radius:50%;
+  background:#777;
+  transition:.2s;
+}
+
+.toggle.on{
+  background:var(--green);
+}
+
+.toggle.on i{
+  transform:translateX(21px);
+  background:#fff;
+}
+
+/* FOOTER */
+.footer{
+  text-align:center;
+  color:#59605e;
+  font-size:9px;
+  padding:20px 10px 90px;
+}
+</style>
+</head>
+
+<body>
+
+<!-- STARTUP -->
+<section id="startup">
+  <div class="startup-inner">
+    <div class="logo-mark">FX</div>
+    <div class="startup-title">THE_FX.TRADER.BOT.ZW</div>
+    <div class="startup-sub">XAUUSD Professional Trading Terminal</div>
+    <div class="loader"><span></span></div>
+    <div id="startupStatus" class="startup-sub">Starting system...</div>
+  </div>
+</section>
+
+<!-- LOGIN -->
+<section id="loginScreen" class="hidden">
+  <div class="login-card">
+    <div class="logo-mark" style="width:82px;height:82px;font-size:28px;border-radius:20px">
+      FX
+    </div>
+
+    <h1>THE_FX.TRADER.BOT.ZW</h1>
+
+    <p>
+      Connect your Deriv account to access the XAUUSD trading terminal.
+      Signal generation remains protected by the bot safety layer.
+    </p>
+
+    <button class="gold-btn" onclick="derivLogin()">
+      CONNECT DERIV ACCOUNT
+    </button>
+
+    <div id="loginStatus" class="status-line">
+      Ready to connect
+    </div>
+  </div>
+</section>
+
+<!-- APP -->
+<section id="app" class="hidden">
+
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-icon">FX</div>
+      <div class="brand-text">
+        <strong>THE_FX.TRADER.BOT.ZW</strong>
+        <small>XAUUSD TERMINAL</small>
+      </div>
+    </div>
+
+    <div class="connection">
+      <span id="connectionDot" class="dot"></span>
+      <span id="connectionText">CHECKING</span>
+    </div>
+  </header>
+
+  <main class="content">
+
+    <!-- DASHBOARD -->
+    <section id="page-dashboard" class="page active">
+
+      <div class="page-title">Trading Terminal</div>
+      <div class="page-subtitle">
+        Market → Technicals → Signal → MTF → News → Trade Setup
+      </div>
+
+      <div class="market-card">
+        <div class="market-row">
+          <div>
+            <div class="symbol">XAUUSD</div>
+            <div class="market-label">GOLD / US DOLLAR · DERIV</div>
+          </div>
+
+          <div>
+            <div id="marketPrice" class="price">—</div>
+            <div id="priceChange" class="price-change">LIVE MARKET</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="signal-card">
+        <div class="signal-top">
+          <div>
+            <div class="signal-label">Current Signal</div>
+            <div id="signalTF" class="muted" style="margin-top:6px;font-size:10px">
+              M1
+            </div>
+          </div>
+
+          <div id="signalBadge" class="signal-badge wait">
+            WAIT
+          </div>
+        </div>
+
+        <div class="strength">
+          <div class="strength-row">
+            <span>Signal Strength</span>
+            <strong id="strength">0/10</strong>
+          </div>
+
+          <div class="strength-bar">
+            <div id="strengthFill" class="strength-fill"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tf-row">
+        <button class="tf-btn active" data-tf="M1">M1</button>
+        <button class="tf-btn" data-tf="M5">M5</button>
+        <button class="tf-btn" data-tf="M15">M15</button>
+        <button class="tf-btn" data-tf="M30">M30</button>
+        <button class="tf-btn" data-tf="H1">H1</button>
+      </div>
+
+      <div class="grid">
+        <div class="metric">
+          <div class="metric-label">Entry</div>
+          <div id="entry" class="metric-value">—</div>
+        </div>
+
+        <div class="metric">
+          <div class="metric-label">Stop Loss</div>
+          <div id="sl" class="metric-value red">—</div>
+        </div>
+
+        <div class="metric">
+          <div class="metric-label">TP1</div>
+          <div id="tp1" class="metric-value green">—</div>
+        </div>
+
+        <div class="metric">
+          <div class="metric-label">TP2</div>
+          <div id="tp2" class="metric-value green">—</div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">
+          <span>Technical Analysis</span>
+          <small class="muted">XAUUSD</small>
+        </div>
+
+        <div class="grid3">
+          <div class="metric">
+            <div class="metric-label">EMA 50</div>
+            <div id="ema50" class="metric-value">—</div>
+          </div>
+
+          <div class="metric">
+            <div class="metric-label">EMA 200</div>
+            <div id="ema200" class="metric-value">—</div>
+          </div>
+
+          <div class="metric">
+            <div class="metric-label">RSI</div>
+            <div id="rsi" class="metric-value">—</div>
+          </div>
+        </div>
+
+        <div class="list-row">
+          <span class="muted">ATR</span>
+          <strong id="atr">—</strong>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">
+          <span>MTF Confirmation</span>
+          <small id="mtfAgreement" class="muted">0%</small>
+        </div>
+
+        <div id="mtfList">
+          <div class="list-row">
+            <span>M1</span><strong class="muted">WAIT</strong>
+          </div>
+          <div class="list-row">
+            <span>M5</span><strong class="muted">WAIT</strong>
+          </div>
+          <div class="list-row">
+            <span>M15</span><strong class="muted">WAIT</strong>
+          </div>
+          <div class="list-row">
+            <span>M30</span><strong class="muted">WAIT</strong>
+          </div>
+          <div class="list-row">
+            <span>H1</span><strong class="muted">WAIT</strong>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">
+          <span>News / Market Risk</span>
+          <span id="newsRisk" class="news-impact low">LOW</span>
+        </div>
+
+        <div class="list-row">
+          <span class="muted">Latest event</span>
+          <strong id="newsTitle">No active news</strong>
+        </div>
+
+        <div class="list-row">
+          <span class="muted">Bias</span>
+          <strong id="newsBias">NEUTRAL</strong>
+        </div>
+
+        <div class="list-row">
+          <span class="muted">Status</span>
+          <strong id="newsStatus" class="green">CLEAR</strong>
+        </div>
+      </div>
+
+      <div class="execute-box">
+        <div class="panel-title">
+          <span>Manual Trade</span>
+          <small class="gold">REAL EXECUTION PROTECTED</small>
+        </div>
+
+        <button
+          id="executeTradeBtn"
+          class="execute-btn"
+          type="button"
+          onclick="openTradeConfirmation()"
+          disabled>
+          EXECUTE REAL TRADE
+        </button>
+
+        <div id="tradeConfirmText" class="confirm-text">
+          Waiting for a valid BUY/SELL signal
+        </div>
+      </div>
+
+    </section>
+
+    <!-- SIGNALS -->
+    <section id="page-signals" class="page">
+
+      <div class="page-title">Signals</div>
+      <div class="page-subtitle">
+        Technical signal engine and timeframe confirmation
+      </div>
+
+      <div class="signal-card">
+        <div class="signal-top">
+          <div>
+            <div class="signal-label">XAUUSD</div>
+            <div id="signalsTF" class="muted" style="margin-top:6px">M1</div>
+          </div>
+
+          <div id="signalsValue" class="signal-badge wait">WAIT</div>
+        </div>
+
+        <div class="strength">
+          <div class="strength-row">
+            <span>Strength</span>
+            <strong id="signalsStrength">0/10</strong>
+          </div>
+          <div class="strength-bar">
+            <div id="signalsFill" class="strength-fill"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">
+          <span>Signal Engine</span>
+          <small class="muted">TECHNICAL ONLY</small>
+        </div>
+
+        <div class="list-row">
+          <span class="muted">EMA trend</span>
+          <strong id="emaTrend">WAIT</strong>
+        </div>
+
+        <div class="list-row">
+          <span class="muted">RSI condition</span>
+          <strong id="rsiCondition">WAIT</strong>
+        </div>
+
+        <div class="list-row">
+          <span class="muted">ATR condition</span>
+          <strong id="atrCondition">WAIT</strong>
+        </div>
+
+        <div class="list-row">
+          <span class="muted">Confirmation</span>
+          <strong id="signalConfirmation">INSUFFICIENT</strong>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- TRADE SETUP -->
+    <section id="page-setup" class="page">
+
+      <div class="page-title">Trade Setup</div>
+      <div class="page-subtitle">
+        Entry, risk management and target structure
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">
+          <span>XAUUSD Setup</span>
+          <span id="setupDirection" class="gold">WAIT</span>
+        </div>
+
+        <div class="setup-grid">
+          <div class="setup-item">
+            <small>ENTRY</small>
+            <strong id="setupEntry">—</strong>
+          </div>
+
+          <div class="setup-item">
+            <small>STOP LOSS</small>
+            <strong id="setupSL" class="red">—</strong>
+          </div>
+
+          <div class="setup-item">
+            <small>TP1</small>
+            <strong id="setupTP1" class="green">—</strong>
+          </div>
+
+          <div class="setup-item">
+            <small>TP2</small>
+            <strong id="setupTP2" class="green">—</strong>
+          </div>
+
+          <div class="setup-item">
+            <small>RISK / REWARD</small>
+            <strong id="setupRR">—</strong>
+          </div>
+
+          <div class="setup-item">
+            <small>TIMEFRAME</small>
+            <strong id="setupTF">M1</strong>
+          </div>
+        </div>
+      </div>
+
+      <div class="execute-box">
+        <div class="panel-title">
+          <span>Manual Execution</span>
+          <small class="muted">ONE-TAP REVIEW</small>
+        </div>
+
+        <button
+          id="setupExecuteBtn"
+          class="execute-btn"
+          onclick="openTradeConfirmation()"
+          disabled>
+          REVIEW TRADE
+        </button>
+
+        <div class="confirm-text">
+          Review the setup before any real order can be sent.
+        </div>
+      </div>
+
+    </section>
+
+    <!-- NEWS -->
+    <section id="page-news" class="page">
+
+      <div class="page-title">News & Market Updates</div>
+      <div class="page-subtitle">
+        News confirms or blocks technical signals; news never creates trades.
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">
+          <span>Current Risk</span>
+          <span id="newsPageRisk" class="news-impact low">LOW</span>
+        </div>
+
+        <div class="list-row">
+          <span class="muted">Headline</span>
+          <strong id="newsPageTitle">No active event</strong>
+        </div>
+
+        <div class="list-row">
+          <span class="muted">Source</span>
+          <strong id="newsSource">—</strong>
+        </div>
+
+        <div class="list-row">
+          <span class="muted">Impact</span>
+          <strong id="newsImpact">LOW</strong>
+        </div>
+
+        <div class="list-row">
+          <span class="muted">Bias</span>
+          <strong id="newsPageBias">NEUTRAL</strong>
+        </div>
+
+        <div class="list-row">
+          <span class="muted">Technical interaction</span>
+          <strong id="newsInteraction">NO BLOCK</strong>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- TRADES -->
+    <section id="page-trades" class="page">
+
+      <div class="page-title">Trades & History</div>
+      <div class="page-subtitle">
+        Open positions, completed trades and execution records
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">
+          <span>Open Trades</span>
+          <small id="openTradeCount" class="muted">0</small>
+        </div>
+
+        <div id="openTrades">
+          <div class="list-row">
+            <span class="muted">No open trades</span>
+            <strong>—</strong>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">
+          <span>Trade History</span>
+        </div>
+
+        <div id="tradeHistory">
+          <div class="list-row">
+            <span class="muted">No trade history loaded</span>
+            <strong>—</strong>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ALERTS -->
+    <section id="page-alerts" class="page">
+
+      <div class="page-title">Alerts</div>
+      <div class="page-subtitle">
+        BUY / SELL notifications, sound and vibration
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">
+          <span>Alert System</span>
+          <span id="alertSystemStatus" class="green">READY</span>
+        </div>
+
+        <div id="alertHistory">
+          <div class="list-row">
+            <span class="muted">No alerts yet</span>
+            <strong>—</strong>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">
+          <span>Android Feedback</span>
+        </div>
+
+        <button class="primary-btn" onclick="testAlertFeedback()">
+          TEST SOUND / VIBRATION
+        </button>
+
+        <div id="alertTestStatus" class="status-line">
+          Ready
+        </div>
+      </div>
+
+    </section>
+
+    <!-- SETTINGS -->
+    <section id="page-settings" class="page">
+
+      <div class="page-title">Settings & Safety</div>
+      <div class="page-subtitle">
+        Trading controls and protection settings
+      </div>
+
+      <div class="panel">
+
+        <div class="setting">
+          <div>
+            <strong>Manual Trading</strong>
+            <small>Manual trade review and confirmation</small>
+          </div>
+          <div class="toggle on"><i></i></div>
+        </div>
+
+        <div class="setting">
+          <div>
+            <strong>Automatic Trading</strong>
+            <small>Architecture available, real automatic execution OFF</small>
+          </div>
+          <div class="toggle"><i></i></div>
+        </div>
+
+        <div class="setting">
+          <div>
+            <strong>Real Trading</strong>
+            <small>Requires explicit backend authorization</small>
+          </div>
+          <div id="realToggle" class="toggle"><i></i></div>
+        </div>
+
+        <div class="setting">
+          <div>
+            <strong>BUY Alerts</strong>
+            <small>Notify when valid BUY signals occur</small>
+          </div>
+          <div class="toggle on"><i></i></div>
+        </div>
+
+        <div class="setting">
+          <div>
+            <strong>SELL Alerts</strong>
+            <small>Notify when valid SELL signals occur</small>
+          </div>
+          <div class="toggle on"><i></i></div>
+        </div>
+
+        <div class="setting">
+          <div>
+            <strong>Sound</strong>
+            <small>Android alert sound</small>
+          </div>
+          <div class="toggle on"><i></i></div>
+        </div>
+
+        <div class="setting">
+          <div>
+            <strong>Vibration</strong>
+            <small>Android vibration feedback</small>
+          </div>
+          <div class="toggle on"><i></i></div>
+        </div>
+
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">
+          <span>Safety</span>
+        </div>
+
+        <div class="list-row">
+          <span class="muted">Symbol restriction</span>
+          <strong class="green">XAUUSD ONLY</strong>
+        </div>
+
+        <div class="list-row">
+          <span class="muted">Automatic real execution</span>
+          <strong class="red">DISABLED</strong>
+        </div>
+
+        <div class="list-row">
+          <span class="muted">Manual confirmation</span>
+          <strong class="green">REQUIRED</strong>
+        </div>
+
+        <div class="list-row">
+          <span class="muted">News safety layer</span>
+          <strong class="green">ACTIVE</strong>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">
+          <span>Account</span>
+        </div>
+
+        <div class="list-row">
+          <span class="muted">Account</span>
+          <strong id="accountType">DEMO</strong>
+        </div>
+
+        <div class="list-row">
+          <span class="muted">Connection</span>
+          <strong id="accountConnection">CHECKING</strong>
+        </div>
+
+        <button class="primary-btn" onclick="logout()">
+          DISCONNECT ACCOUNT
+        </button>
+      </div>
+
+    </section>
+
+  </main>
+
+  <div class="footer">
+    THE_FX.TRADER.BOT.ZW · XAUUSD Trading Terminal<br>
+    © 2026 All Rights Reserved · 078 455 2452
+  </div>
+
+  <nav class="bottom-nav">
+
+    <button class="nav-btn active" data-page="dashboard">
+      <span>⌂</span>Dashboard
+    </button>
+
+    <button class="nav-btn" data-page="signals">
+      <span>◈</span>Signals
+    </button>
+
+    <button class="nav-btn" data-page="setup">
+      <span>⚡</span>Setup
+    </button>
+
+    <button class="nav-btn" data-page="news">
+      <span>◉</span>News
+    </button>
+
+    <button class="nav-btn" data-page="trades">
+      <span>▣</span>Trades
+    </button>
+
+    <button class="nav-btn" data-page="alerts">
+      <span>♢</span>Alerts
+    </button>
+
+    <button class="nav-btn" data-page="settings">
+      <span>⚙</span>Settings
+    </button>
+
+  </nav>
+
+</section>
+
+<!-- CONFIRMATION MODAL -->
+<div id="tradeModal" class="modal">
+
+  <div class="modal-card">
+
+    <h2>Confirm Manual Trade</h2>
+
+    <p>
+      Review this XAUUSD setup carefully. The final order requires
+      explicit confirmation. Automatic real-money execution remains disabled.
+    </p>
+
+    <div class="setup-grid">
+
+      <div class="setup-item">
+        <small>DIRECTION</small>
+        <strong id="modalDirection">—</strong>
+      </div>
+
+      <div class="setup-item">
+        <small>STRENGTH</small>
+        <strong id="modalStrength">—</strong>
+      </div>
+
+      <div class="setup-item">
+        <small>ENTRY</small>
+        <strong id="modalEntry">—</strong>
+      </div>
+
+      <div class="setup-item">
+        <small>STOP LOSS</small>
+        <strong id="modalSL">—</strong>
+      </div>
+
+      <div class="setup-item">
+        <small>TP1</small>
+        <strong id="modalTP1">—</strong>
+      </div>
+
+      <div class="setup-item">
+        <small>TP2</small>
+        <strong id="modalTP2">—</strong>
+      </div>
+
+    </div>
+
+    <div id="modalMessage"
+         class="status-line"
+         style="text-align:center">
+      Awaiting confirmation
+    </div>
+
+    <div class="modal-actions">
+      <button class="cancel-btn" onclick="closeTradeModal()">
+        CANCEL
+      </button>
+
+      <button class="confirm-btn" onclick="confirmManualTrade()">
+        CONFIRM
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const state = {
+  timeframe: "M1",
+  signal: "WAIT",
+  strength: 0,
+  entry: "—",
+  sl: "—",
+  tp1: "—",
+  tp2: "—",
+  ema50: "—",
+  ema200: "—",
+  rsi: "—",
+  atr: "—"
+};
+
+function $(id){
+  return document.getElementById(id);
+}
+
+function show(id){
+  $(id)?.classList.remove("hidden");
+}
+
+function hide(id){
+  $(id)?.classList.add("hidden");
+}
+
+/* STARTUP */
+setTimeout(async () => {
+  $("startupStatus").textContent = "Checking bot connection...";
+
+  try{
+    const response = await fetch("/api/v1/status", {
+      cache:"no-store"
+    });
+
+    if(response.ok){
+      $("startupStatus").textContent = "BOT ONLINE";
+      setTimeout(startApplication, 600);
+    }else{
+      $("startupStatus").textContent = "BACKEND CHECK REQUIRED";
+      setTimeout(startApplication, 900);
+    }
+  }catch(e){
+    $("startupStatus").textContent =
+      "READY — BACKEND DISCONNECTED";
+    setTimeout(startApplication, 900);
+  }
+}, 1200);
+
+function startApplication(){
+  hide("startup");
+
+  /*
+   * The terminal remains usable even if the backend is unavailable.
+   * This prevents the Android interface from closing.
+   */
+  show("app");
+
+  setConnection(false);
+  loadAll();
+}
+
+/* NAVIGATION */
+document.querySelectorAll(".nav-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+
+    document.querySelectorAll(".nav-btn")
+      .forEach(x => x.classList.remove("active"));
+
+    btn.classList.add("active");
+
+    document.querySelectorAll(".page")
+      .forEach(x => x.classList.remove("active"));
+
+    const page = $("page-" + btn.dataset.page);
+
+    if(page){
+      page.classList.add("active");
+    }
+
+    loadAll();
+  });
+});
+
+/* TIMEFRAMES */
+document.querySelectorAll(".tf-btn").forEach(btn => {
+
+  btn.addEventListener("click", () => {
+
+    document.querySelectorAll(".tf-btn")
+      .forEach(x => x.classList.remove("active"));
+
+    btn.classList.add("active");
+
+    state.timeframe = btn.dataset.tf;
+
+    loadSignal();
+  });
+
+});
+
+/* CONNECTION */
+function setConnection(online){
+
+  const dot = $("connectionDot");
+  const text = $("connectionText");
+
+  if(online){
+    dot.className = "dot online";
+    text.textContent = "ONLINE";
+    $("accountConnection").textContent = "ONLINE";
+  }else{
+    dot.className = "dot offline";
+    text.textContent = "DISCONNECTED";
+    $("accountConnection").textContent = "OFFLINE";
+  }
+}
+
+/* LOGIN */
+async function derivLogin(){
+
+  $("loginStatus").textContent =
+    "Opening Deriv OAuth...";
+
+  try{
+
+    const response =
+      await fetch("/api/oauth/login", {
+        redirect:"follow"
+      });
+
+    if(response.redirected){
+      window.location.href = response.url;
+      return;
+    }
+
+    if(response.ok){
+      window.location.href =
+        "/api/oauth/login";
+      return;
+    }
+
+    $("loginStatus").textContent =
+      "OAuth endpoint unavailable.";
+
+  }catch(error){
+
+    $("loginStatus").textContent =
+      "Unable to connect to OAuth.";
+  }
+}
+
+/* LOAD ALL */
+async function loadAll(){
+
+  await Promise.allSettled([
+    loadStatus(),
+    loadSignal(),
+    loadTrades(),
+    loadAlerts(),
+    loadOAuthStatus()
+  ]);
+}
+
+/* STATUS */
+async function loadStatus(){
+
+  try{
+
+    const response =
+      await fetch("/api/v1/status", {
+        cache:"no-store"
+      });
+
+    if(!response.ok) throw new Error();
+
+    const data = await response.json();
+
+    setConnection(true);
+
+    if(data.price !== undefined){
+      $("marketPrice").textContent =
+        formatNumber(data.price);
+    }
+
+    if(data.symbol){
+      $("accountType").textContent =
+        data.mode || "DEMO";
+    }
+
+  }catch(error){
+
+    setConnection(false);
+  }
+}
+
+/* SIGNAL */
+async function loadSignal(){
+
+  try{
+
+    const url =
+      "/api/v1/signal?timeframe=" +
+      encodeURIComponent(state.timeframe);
+
+    const response =
+      await fetch(url, {
+        cache:"no-store"
+      });
+
+    if(!response.ok) throw new Error();
+
+    const data = await response.json();
+
+    setConnection(true);
+
+    state.signal =
+      String(data.signal || "WAIT").toUpperCase();
+
+    state.strength =
+      Number(data.strength || 0);
+
+    state.entry =
+      data.entry ?? "—";
+
+    state.sl =
+      data.stop_loss ?? data.sl ?? "—";
+
+    state.tp1 =
+      data.tp1 ?? data.take_profit ?? "—";
+
+    state.tp2 =
+      data.tp2 ?? "—";
+
+    state.ema50 =
+      data.ema50 ?? "—";
+
+    state.ema200 =
+      data.ema200 ?? "—";
+
+    state.rsi =
+      data.rsi ?? "—";
+
+    state.atr =
+      data.atr ?? "—";
+
+    renderSignal();
+
+  }catch(error){
+
+    /*
+     * Keep the interface available even without backend.
+     * Do not fabricate a trading signal.
+     */
+    state.signal = "WAIT";
+    state.strength = 0;
+
+    renderSignal();
+  }
+}
+
+function renderSignal(){
+
+  const signal = state.signal;
+
+  $("signalBadge").textContent = signal;
+  $("signalsValue").textContent = signal;
+
+  $("signalBadge").className =
+    "signal-badge " +
+    (signal === "BUY"
+      ? "buy"
+      : signal === "SELL"
+        ? "sell"
+        : "wait");
+
+  $("signalsValue").className =
+    "signal-badge " +
+    (signal === "BUY"
+      ? "buy"
+      : signal === "SELL"
+        ? "sell"
+        : "wait");
+
+  $("signalTF").textContent =
+    state.timeframe;
+
+  $("signalsTF").textContent =
+    state.timeframe;
+
+  $("strength").textContent =
+    state.strength + "/10";
+
+  $("signalsStrength").textContent =
+    state.strength + "/10";
+
+  $("strengthFill").style.width =
+    Math.max(0,Math.min(100,state.strength * 10)) + "%";
+
+  $("signalsFill").style.width =
+    Math.max(0,Math.min(100,state.strength * 10)) + "%";
+
+  $("entry").textContent = state.entry;
+  $("sl").textContent = state.sl;
+  $("tp1").textContent = state.tp1;
+  $("tp2").textContent = state.tp2;
+
+  $("setupDirection").textContent = signal;
+  $("setupEntry").textContent = state.entry;
+  $("setupSL").textContent = state.sl;
+  $("setupTP1").textContent = state.tp1;
+  $("setupTP2").textContent = state.tp2;
+  $("setupTF").textContent = state.timeframe;
+
+  $("ema50").textContent = state.ema50;
+  $("ema200").textContent = state.ema200;
+  $("rsi").textContent = state.rsi;
+  $("atr").textContent = state.atr;
+
+  $("setupRR").textContent =
+    calculateRR(
+      state.entry,
+      state.sl,
+      state.tp1,
+      signal
+    );
+
+  $("emaTrend").textContent =
+    state.ema50 !== "—" &&
+    state.ema200 !== "—"
+      ? "AVAILABLE"
+      : "WAIT";
+
+  $("rsiCondition").textContent =
+    state.rsi !== "—"
+      ? "AVAILABLE"
+      : "WAIT";
+
+  $("atrCondition").textContent =
+    state.atr !== "—"
+      ? "AVAILABLE"
+      : "WAIT";
+
+  $("signalConfirmation").textContent =
+    signal === "WAIT"
+      ? "INSUFFICIENT"
+      : "CONFIRMED";
+
+  updateManualTradeButton(
+    signal,
+    state.strength
+  );
+}
+
+/* MANUAL EXECUTE BUTTON */
+function updateManualTradeButton(
+  signal,
+  strength
+){
+
+  const valid =
+    (signal === "BUY" || signal === "SELL") &&
+    Number(strength) > 0;
+
+  const buttons = [
+    $("executeTradeBtn"),
+    $("setupExecuteBtn")
+  ];
+
+  buttons.forEach(btn => {
+
+    if(!btn) return;
+
+    btn.disabled = !valid;
+
+    if(valid){
+
+      btn.style.background =
+        signal === "BUY"
+          ? "#087f5b"
+          : "#b42318";
+
+      btn.textContent =
+        signal === "BUY"
+          ? "EXECUTE BUY — REAL TRADE"
+          : "EXECUTE SELL — REAL TRADE";
+
+    }else{
+
+      btn.style.background = "#444";
+      btn.textContent =
+        btn.id === "setupExecuteBtn"
+          ? "REVIEW TRADE"
+          : "EXECUTE REAL TRADE";
+    }
+  });
+
+  $("tradeConfirmText").textContent =
+    valid
+      ? "Tap to review and explicitly confirm this trade."
+      : "Waiting for a valid BUY/SELL signal";
+}
+
+/* TRADE PREVIEW */
+async function prepareTrade(){
+
+  const payload = {
+    signal:state.signal,
+    entry:state.entry,
+    stop_loss:state.sl,
+    take_profit:state.tp1,
+    strength:state.strength,
+    timeframe:state.timeframe
+  };
+
+  try{
+
+    const response =
+      await fetch("/api/trading/preview", {
+        method:"POST",
+        headers:{
+          "Content-Type":"application/json"
+        },
+        body:JSON.stringify(payload)
+      });
+
+    if(!response.ok){
+      return {
+        ok:false,
+        error:"Trade preview rejected"
+      };
+    }
+
+    return await response.json();
+
+  }catch(error){
+
+    return {
+      ok:false,
+      error:"Trading backend unavailable"
+    };
+  }
+}
+
+/* OPEN CONFIRMATION */
+async function openTradeConfirmation(){
+
+  if(
+    state.signal !== "BUY" &&
+    state.signal !== "SELL"
+  ){
+
+    alert("No valid BUY/SELL signal is available.");
+    return;
+  }
+
+  if(Number(state.strength) <= 0){
+
+    alert("Signal strength is not valid.");
+    return;
+  }
+
+  $("modalDirection").textContent =
+    state.signal;
+
+  $("modalStrength").textContent =
+    state.strength + "/10";
+
+  $("modalEntry").textContent =
+    state.entry;
+
+  $("modalSL").textContent =
+    state.sl;
+
+  $("modalTP1").textContent =
+    state.tp1;
+
+  $("modalTP2").textContent =
+    state.tp2;
+
+  $("modalMessage").textContent =
+    "Preparing manual trade review...";
+
+  $("tradeModal").classList.add("show");
+
+  const preview =
+    await prepareTrade();
+
+  if(preview.ok){
+
+    $("modalMessage").textContent =
+      "READY FOR YOUR EXPLICIT CONFIRMATION. NO ORDER HAS BEEN SENT.";
+
+  }else{
+
+    $("modalMessage").textContent =
+      preview.error ||
+      "Preview unavailable. No order has been sent.";
+  }
+}
+
+function closeTradeModal(){
+
+  $("tradeModal").classList.remove("show");
+}
+
+/*
+ * IMPORTANT:
+ * This function deliberately does NOT call a real
+ * buy/sell endpoint.
+ *
+ * The backend remains the final safety boundary.
+ */
+async function confirmManualTrade(){
+
+  const confirmation =
+    window.confirm(
+      "CONFIRM REAL TRADE\\n\\n" +
+      "XAUUSD: " + state.signal + "\\n" +
+      "Entry: " + state.entry + "\\n" +
+      "Stop Loss: " + state.sl + "\\n" +
+      "TP1: " + state.tp1 + "\\n" +
+      "TP2: " + state.tp2 + "\\n" +
+      "Strength: " + state.strength + "/10\\n\\n" +
+      "You are explicitly confirming this manual trade review."
+    );
+
+  if(!confirmation){
+    return;
+  }
+
+  $("modalMessage").textContent =
+    "Confirmation received. Backend real-trading authorization is still required.";
+
+  /*
+   * No real order is sent here.
+   * Automatic real trading remains disabled.
+   */
+  setTimeout(() => {
+
+    alert(
+      "Trade confirmation received.\\n\\n" +
+      "The backend safety layer remains active.\\n" +
+      "No automatic order was sent."
+    );
+
+    closeTradeModal();
+
+  },300);
+}
+
+/* TRADES */
+async function loadTrades(){
+
+  try{
+
+    const response =
+      await fetch("/api/v1/trades", {
+        cache:"no-store"
+      });
+
+    if(!response.ok) throw new Error();
+
+    const data = await response.json();
+
+    const trades =
+      Array.isArray(data)
+        ? data
+        : Array.isArray(data.trades)
+          ? data.trades
+          : [];
+
+    $("openTradeCount").textContent =
+      trades.length;
+
+    if(!trades.length){
+
+      $("openTrades").innerHTML =
+        '<div class="list-row">' +
+        '<span class="muted">No open trades</span>' +
+        '<strong>—</strong>' +
+        '</div>';
+
+      return;
+    }
+
+    $("openTrades").innerHTML =
+      trades.slice(0,20).map(t => {
+
+        return `
+          <div class="list-row">
+            <span>
+              <strong>${escapeHTML(t.symbol || "XAUUSD")}</strong>
+              <br>
+              <small class="muted">
+                ${escapeHTML(t.direction || t.signal || "TRADE")}
+              </small>
+            </span>
+            <strong>
+              ${escapeHTML(String(t.status || "OPEN"))}
+            </strong>
+          </div>
+        `;
+
+      }).join("");
+
+  }catch(error){
+
+    $("openTrades").innerHTML =
+      '<div class="list-row">' +
+      '<span class="muted">Trading data unavailable</span>' +
+      '<strong>—</strong>' +
+      '</div>';
+  }
+}
+
+/* ALERTS */
+async function loadAlerts(){
+
+  try{
+
+    const response =
+      await fetch("/api/v1/alerts", {
+        cache:"no-store"
+      });
+
+    if(!response.ok) throw new Error();
+
+    const data = await response.json();
+
+    const alerts =
+      Array.isArray(data)
+        ? data
+        : Array.isArray(data.alerts)
+          ? data.alerts
+          : [];
+
+    if(!alerts.length){
+      return;
+    }
+
+    $("alertHistory").innerHTML =
+      alerts.slice(0,20).map(a => {
+
+        return `
+          <div class="list-row">
+            <span>
+              <strong>${escapeHTML(
+                a.title || a.type || "ALERT"
+              )}</strong>
+              <br>
+              <small class="muted">
+                ${escapeHTML(
+                  a.message || ""
+                )}
+              </small>
+            </span>
+            <small class="muted">
+              ${escapeHTML(
+                a.timestamp || ""
+              )}
+            </small>
+          </div>
+        `;
+
+      }).join("");
+
+  }catch(error){
+    /* Keep interface usable offline. */
+  }
+}
+
+/* OAUTH STATUS */
+async function loadOAuthStatus(){
+
+  try{
+
+    const response =
+      await fetch("/api/oauth/status", {
+        cache:"no-store"
+      });
+
+    if(!response.ok) return;
+
+    const data = await response.json();
+
+    const authenticated =
+      data.authenticated === true ||
+      data.oauth_authenticated === true;
+
+    if(authenticated){
+      $("accountType").textContent =
+        data.account_type || "CONNECTED";
+    }
+
+  }catch(error){
+    /* OAuth may be unavailable while offline. */
+  }
+}
+
+/* LOGOUT */
+async function logout(){
+
+  try{
+
+    await fetch("/api/oauth/logout", {
+      method:"POST"
+    });
+
+  }catch(error){
+    /* Local UI still resets. */
+  }
+
+  location.reload();
+}
+
+/* ALERT FEEDBACK */
+async function testAlertFeedback(){
+
+  $("alertTestStatus").textContent =
+    "Testing Android feedback...";
+
+  /*
+   * Optional bridge endpoints are intentionally not
+   * required for the core trading interface.
+   */
+  if("vibrate" in navigator){
+
+    try{
+      navigator.vibrate([120,80,120]);
+    }catch(e){}
+  }
+
+  $("alertTestStatus").textContent =
+    "Vibration test requested.";
+}
+
+/* NEWS */
+async function loadNews(){
+
+  /*
+   * News data is supplied by the existing backend
+   * production/news pipeline when available.
+   *
+   * No frontend-generated news is created.
+   */
+}
+
+/* UTILITIES */
+function formatNumber(value){
+
+  const n = Number(value);
+
+  if(!Number.isFinite(n)){
+    return String(value ?? "—");
+  }
+
+  return n.toFixed(
+    n >= 1000 ? 2 : 2
+  );
+}
+
+function calculateRR(
+  entry,
+  sl,
+  tp,
+  direction
+){
+
+  const e = Number(entry);
+  const s = Number(sl);
+  const t = Number(tp);
+
+  if(
+    !Number.isFinite(e) ||
+    !Number.isFinite(s) ||
+    !Number.isFinite(t)
+  ){
+    return "—";
+  }
+
+  const risk =
+    Math.abs(e - s);
+
+  const reward =
+    Math.abs(t - e);
+
+  if(risk <= 0){
+    return "—";
+  }
+
+  return "1:" + (reward / risk).toFixed(2);
+}
+
+function escapeHTML(value){
+
+  return String(value ?? "")
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+}
+
+/* PERIODIC REFRESH */
+setInterval(() => {
+
+  if(!$("app")?.classList.contains("hidden")){
+
+    loadStatus();
+    loadSignal();
+    loadNews();
+
+  }
+
+},5000);
+
+/* INITIAL NEWS */
+loadNews();
+
+</script>
+
+</body>
+</html>

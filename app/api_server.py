@@ -1,6 +1,7 @@
+from pathlib import Path
 from app.oauth.routes import oauth_bp
 from app.email_mode_routes import email_mode_bp
-from flask import Flask, jsonify
+from flask import Flask, jsonify, send_file
 
 from app.trade_history_api import TradeHistoryAPI
 
@@ -17,6 +18,21 @@ app.register_blueprint(mode_bp)
 app.register_blueprint(email_mode_bp)
 history = TradeHistoryAPI()
 
+
+
+# Existing THE_FX.TRADER.ZW dashboard
+# Serves the dashboard already stored in frontend/index.html.
+@app.get("/")
+def dashboard_home():
+    dashboard = Path(__file__).resolve().parent.parent / "frontend" / "index.html"
+
+    if not dashboard.exists():
+        return {
+            "ok": False,
+            "error": "frontend/index.html not found"
+        }, 500
+
+    return send_file(dashboard)
 
 @app.get("/api/trades")
 def trades():
@@ -86,6 +102,60 @@ def trade_monitor(contract_id):
     finally:
         client.disconnect()
 
+
+
+@app.post("/api/trading/preview")
+def trading_preview():
+    """
+    Prepare a manual trade for review.
+
+    Safety:
+    - Does NOT execute a trade.
+    - Does NOT call Deriv buy/sell.
+    - Does NOT enable automatic trading.
+    - Real execution remains protected by DerivExecutionClient.
+    """
+    data = request.get_json(silent=True) or {}
+
+    signal = str(data.get("signal", "")).upper().strip()
+    entry = data.get("entry")
+    stop_loss = data.get("stop_loss")
+    take_profit = data.get("take_profit")
+    strength = data.get("strength", 0)
+    timeframe = str(data.get("timeframe", "M1")).upper().strip()
+
+    if signal not in ("BUY", "SELL"):
+        return jsonify({
+            "ok": False,
+            "error": "Only BUY or SELL signals can be prepared."
+        }), 400
+
+    try:
+        strength = float(strength)
+    except (TypeError, ValueError):
+        strength = 0
+
+    if strength <= 0:
+        return jsonify({
+            "ok": False,
+            "error": "Signal strength must be greater than zero."
+        }), 400
+
+    return jsonify({
+        "ok": True,
+        "status": "READY_FOR_MANUAL_CONFIRMATION",
+        "symbol": "XAUUSD",
+        "signal": signal,
+        "entry": entry,
+        "stop_loss": stop_loss,
+        "take_profit": take_profit,
+        "strength": strength,
+        "timeframe": timeframe,
+        "execution": "MANUAL",
+        "real_trading": False,
+        "order_sent": False,
+        "message": "Trade prepared for explicit manual confirmation. No order was sent."
+    })
 
 @app.get("/api/trading/status")
 def trading_status():

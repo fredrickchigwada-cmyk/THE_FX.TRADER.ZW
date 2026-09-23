@@ -58,14 +58,31 @@ class CandleEngine:
         "MN1": 2592000,
     }
 
-    def __init__(self, max_history: int = 500):
+    def __init__(
+        self,
+        max_history: int = 500,
+        symbol: str = None,
+        timeframes: list = None,
+    ):
         self.max_history = max_history
+
+        # Optional default symbol/timeframes for callers that want
+        # to initialise the engine for a specific market.
+        # Existing CandleEngine() behaviour remains unchanged.
+        self.symbol = symbol
+        self.timeframes = list(timeframes) if timeframes else list(self.TIMEFRAMES)
+
+        for timeframe in self.timeframes:
+            self.timeframe_seconds(timeframe)
 
         # symbol -> timeframe -> list[Candle]
         self.history: Dict[str, Dict[str, List[Candle]]] = {}
 
         # symbol -> timeframe -> current unfinished candle
         self.current: Dict[str, Dict[str, Candle]] = {}
+
+        if self.symbol:
+            self._ensure_symbol(self.symbol)
 
     @classmethod
     def timeframe_seconds(cls, timeframe: str) -> int:
